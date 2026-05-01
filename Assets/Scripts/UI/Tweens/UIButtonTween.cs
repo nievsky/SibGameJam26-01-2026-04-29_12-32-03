@@ -34,12 +34,12 @@ public class UIButtonTween : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
         rectTransform.DOScale(originalScale * hoverScale, animationDuration)
             .SetEase(Ease.OutBack);
 
-        UIAudioManager.Instance.PlayHoverSFX();
+        // UIAudioManager.Instance.PlayHoverSFX();
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        UIAudioManager.Instance.PlayClickSFX();
+        // UIAudioManager.Instance.PlayClickSFX();
     }
     
     public void OnPointerExit(PointerEventData eventData)
