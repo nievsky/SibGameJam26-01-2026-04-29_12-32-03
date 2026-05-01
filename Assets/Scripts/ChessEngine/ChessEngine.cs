@@ -41,7 +41,7 @@ public class ChessEngine
 
     // --- ЛОГИКА РАСЧЕТА ХОДОВ ---
 
-    public List<Vector2Int> GetValidMoves(Vector2Int startPos)
+    public List<Vector2Int> GetValidMoves(Vector2Int startPos, bool isForThreatMap = false)
     {
         List<Vector2Int> validMoves = new List<Vector2Int>();
         BoardCell startCell = GetCell(startPos);
@@ -76,7 +76,7 @@ public class ChessEngine
                 CalculateKingMoves(startPos, validMoves, alignment);
                 break;
             case PieceType.Pawn:
-                CalculatePawnMoves(startPos, validMoves, alignment);
+                CalculatePawnMoves(startPos, validMoves, alignment, isForThreatMap);
                 break;
         }
 
@@ -89,26 +89,47 @@ public class ChessEngine
         foreach (Vector2Int dir in directions)
         {
             Vector2Int currentPos = startPos + dir;
+            Vector2Int? lastValidEmptyCell = null;
 
             while (IsWithinBounds(currentPos.x, currentPos.y))
             {
                 BoardCell cell = GetCell(currentPos);
-                if (!cell.IsActive) break;
+                
+                // Если уперлись в стену (неактивную клетку)
+                if (!cell.IsActive) 
+                {
+                    // Если перед стеной были пустые клетки - останавливаемся на последней пустой
+                    if (lastValidEmptyCell.HasValue) 
+                        validMoves.Add(lastValidEmptyCell.Value);
+                    break;
+                }
 
                 if (cell.IsEmpty)
                 {
-                    validMoves.Add(currentPos);
+                    // Запоминаем пустую клетку и скользим дальше
+                    lastValidEmptyCell = currentPos;
                 }
-                else if (cell.PieceAlignment != alignment) // Если чужая фигура - можем бить
+                else if (cell.PieceAlignment != alignment) 
                 {
+                    // Уперлись во врага - рубим его (останавливаемся на его клетке)
                     validMoves.Add(currentPos); 
-                    break; // Дальше врага пройти нельзя
-                }
-                else if (cell.PieceAlignment == alignment) // Если своя фигура - путь закрыт
-                {
                     break; 
                 }
+                else if (cell.PieceAlignment == alignment) 
+                {
+                    // Уперлись в свою фигуру - останавливаемся ПЕРЕД ней на последней пустой
+                    if (lastValidEmptyCell.HasValue) 
+                        validMoves.Add(lastValidEmptyCell.Value);
+                    break; 
+                }
+
                 currentPos += dir;
+            }
+
+            // Если мы вылетели за край доски, но перед этим были пустые клетки
+            if (!IsWithinBounds(currentPos.x, currentPos.y) && lastValidEmptyCell.HasValue)
+            {
+                validMoves.Add(lastValidEmptyCell.Value);
             }
         }
     }
@@ -161,23 +182,27 @@ public class ChessEngine
         }
     }
 
-    private void CalculatePawnMoves(Vector2Int startPos, List<Vector2Int> validMoves, Alignment alignment)
+ private void CalculatePawnMoves(Vector2Int startPos, List<Vector2Int> validMoves, Alignment alignment, bool isForThreatMap)
     {
         // Игрок идет вверх (y + 1), враг идет вниз (y - 1)
         int forwardDirection = (alignment == Alignment.Player) ? 1 : -1;
-    
-        // 1. Шаг вперед (только если клетка пустая)
-        Vector2Int forwardPos = startPos + new Vector2Int(0, forwardDirection);
-        if (IsWithinBounds(forwardPos.x, forwardPos.y))
+        
+        // 1. Движение вперед (Только если мы НЕ считаем карту угроз, потому что пешка не бьет вперед)
+        if (!isForThreatMap)
         {
-            BoardCell forwardCell = GetCell(forwardPos);
-            if (forwardCell.IsActive && forwardCell.IsEmpty)
+            Vector2Int forwardPos = startPos + new Vector2Int(0, forwardDirection);
+            if (IsWithinBounds(forwardPos.x, forwardPos.y))
             {
-                validMoves.Add(forwardPos);
+                BoardCell forwardCell = GetCell(forwardPos);
+                // Пешка идет вперед ТОЛЬКО если клетка активна и там никого нет
+                if (forwardCell.IsActive && forwardCell.IsEmpty)
+                {
+                    validMoves.Add(forwardPos);
+                }
             }
         }
 
-        // 2. Атака по диагонали (только если там враг)
+        // 2. Атака по диагонали
         Vector2Int[] attackOffsets = new Vector2Int[] { new Vector2Int(-1, forwardDirection), new Vector2Int(1, forwardDirection) };
         foreach (Vector2Int offset in attackOffsets)
         {
@@ -185,9 +210,21 @@ public class ChessEngine
             if (IsWithinBounds(attackPos.x, attackPos.y))
             {
                 BoardCell attackCell = GetCell(attackPos);
-                if (attackCell.IsActive && !attackCell.IsEmpty && attackCell.PieceAlignment != alignment)
+                
+                if (isForThreatMap)
                 {
-                    validMoves.Add(attackPos);
+                    // Если мы составляем карту угроз врагов, мы просто добавляем диагонали
+                    // (даже если они пустые, чтобы игрок знал, что туда наступать нельзя)
+                    if (attackCell.IsActive) 
+                        validMoves.Add(attackPos);
+                }
+                else
+                {
+                    // Если это расчет хода игрока, мы добавляем диагональ ТОЛЬКО если там стоит враг, которого можно срубить
+                    if (attackCell.IsActive && !attackCell.IsEmpty && attackCell.PieceAlignment != alignment)
+                    {
+                        validMoves.Add(attackPos);
+                    }
                 }
             }
         }
@@ -212,7 +249,7 @@ public class ChessEngine
                 BoardCell cell = _grid[x, y];
                 if (cell.HasEnemy)
                 {
-                    List<Vector2Int> threats = GetValidMoves(cell.Position);
+                    List<Vector2Int> threats = GetValidMoves(cell.Position, true);
                     foreach (Vector2Int threatPos in threats)
                     {
                         // Записываем позицию врага (cell.Position) в клетку под угрозой

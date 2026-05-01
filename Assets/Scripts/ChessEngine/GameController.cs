@@ -405,12 +405,12 @@ public class GameController : MonoBehaviour
 
     private void SelectPiece(Vector2Int piecePos)
     {
-        DeselectPiece(); // Сбрасываем предыдущие подсветки
+        DeselectPiece(); 
 
         _selectedPiece = _pieceViews[piecePos];
-        _currentValidMoves = _engine.GetValidMoves(piecePos);
+        // Вызываем без флага, так как это расчет обычных ходов игрока
+        _currentValidMoves = _engine.GetValidMoves(piecePos); 
 
-        // Подсвечиваем доступные клетки
         foreach (Vector2Int movePos in _currentValidMoves)
         {
             if (_engine.GetCell(movePos).HasEnemy)
