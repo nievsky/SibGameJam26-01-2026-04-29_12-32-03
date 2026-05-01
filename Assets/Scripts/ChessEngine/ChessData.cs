@@ -1,12 +1,15 @@
 using UnityEngine;
-
+using System.Collections.Generic;
 // Тип фигуры
 public enum PieceType 
 { 
     None, 
     Rook,   // Ладья
     Bishop, // Слон
-    Knight  // Конь
+    Knight, // Конь
+    Queen,  // Ферзь
+    King,   // Король
+    Pawn    // Пешка
 }
 
 // Принадлежность фигуры
@@ -44,5 +47,6 @@ public class BoardCell
         PieceAlignment = Alignment.None;
     }
     
-    public bool IsUnderEnemyAttack { get; set; } = false;
+    public List<Vector2Int> AttackedBy { get; private set; } = new List<Vector2Int>();
+    public bool IsUnderEnemyAttack => AttackedBy.Count > 0;
 }

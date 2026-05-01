@@ -66,6 +66,18 @@ public class ChessEngine
             case PieceType.Knight:
                 CalculateKnightMoves(startPos, validMoves, alignment);
                 break;
+            case PieceType.Queen:
+                CalculateLinearMoves(startPos, validMoves, new Vector2Int[] { 
+                    Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right,
+                    new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1) 
+                }, alignment);
+                break;
+            case PieceType.King:
+                CalculateKingMoves(startPos, validMoves, alignment);
+                break;
+            case PieceType.Pawn:
+                CalculatePawnMoves(startPos, validMoves, alignment);
+                break;
         }
 
         return validMoves;
@@ -127,6 +139,60 @@ public class ChessEngine
         }
     }
     
+    private void CalculateKingMoves(Vector2Int startPos, List<Vector2Int> validMoves, Alignment alignment)
+    {
+        Vector2Int[] kingDirections = new Vector2Int[]
+        {
+            Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right,
+            new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1)
+        };
+
+        foreach (Vector2Int dir in kingDirections)
+        {
+            Vector2Int targetPos = startPos + dir;
+            if (IsWithinBounds(targetPos.x, targetPos.y))
+            {
+                BoardCell cell = GetCell(targetPos);
+                if (cell.IsActive && cell.PieceAlignment != alignment)
+                {
+                    validMoves.Add(targetPos);
+                }
+            }
+        }
+    }
+
+    private void CalculatePawnMoves(Vector2Int startPos, List<Vector2Int> validMoves, Alignment alignment)
+    {
+        // Игрок идет вверх (y + 1), враг идет вниз (y - 1)
+        int forwardDirection = (alignment == Alignment.Player) ? 1 : -1;
+    
+        // 1. Шаг вперед (только если клетка пустая)
+        Vector2Int forwardPos = startPos + new Vector2Int(0, forwardDirection);
+        if (IsWithinBounds(forwardPos.x, forwardPos.y))
+        {
+            BoardCell forwardCell = GetCell(forwardPos);
+            if (forwardCell.IsActive && forwardCell.IsEmpty)
+            {
+                validMoves.Add(forwardPos);
+            }
+        }
+
+        // 2. Атака по диагонали (только если там враг)
+        Vector2Int[] attackOffsets = new Vector2Int[] { new Vector2Int(-1, forwardDirection), new Vector2Int(1, forwardDirection) };
+        foreach (Vector2Int offset in attackOffsets)
+        {
+            Vector2Int attackPos = startPos + offset;
+            if (IsWithinBounds(attackPos.x, attackPos.y))
+            {
+                BoardCell attackCell = GetCell(attackPos);
+                if (attackCell.IsActive && !attackCell.IsEmpty && attackCell.PieceAlignment != alignment)
+                {
+                    validMoves.Add(attackPos);
+                }
+            }
+        }
+    }
+    
     public void UpdateThreatMap()
     {
         // 1. Очищаем старые угрозы
@@ -134,11 +200,11 @@ public class ChessEngine
         {
             for (int y = 0; y < Height; y++)
             {
-                _grid[x, y].IsUnderEnemyAttack = false;
+                _grid[x, y].AttackedBy.Clear(); // Очищаем список
             }
         }
 
-        // 2. Ищем всех врагов и отмечаем клетки, куда они могут ударить
+        // 2. Ищем всех врагов и записываем ИХ координаты в клетки, куда они бьют
         for (int x = 0; x < Width; x++)
         {
             for (int y = 0; y < Height; y++)
@@ -149,7 +215,8 @@ public class ChessEngine
                     List<Vector2Int> threats = GetValidMoves(cell.Position);
                     foreach (Vector2Int threatPos in threats)
                     {
-                        GetCell(threatPos).IsUnderEnemyAttack = true;
+                        // Записываем позицию врага (cell.Position) в клетку под угрозой
+                        GetCell(threatPos).AttackedBy.Add(cell.Position); 
                     }
                 }
             }

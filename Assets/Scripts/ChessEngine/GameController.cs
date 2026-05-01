@@ -5,10 +5,28 @@ public class GameController : MonoBehaviour
 {
     [Header("Prefabs & Setup")]
     [SerializeField] private CellView _cellPrefab;
-    [SerializeField] private PieceView _knightPrefab; // Для примера возьмем префаб Коня
-    [SerializeField] private PieceView _enemyRookPrefab;
     [SerializeField] private float _cellSize = 1.1f;  // Расстояние между 3D клетками
-    [SerializeField] private LayerMask _cellLayer;    // Слой, на котором находятся клетки (для Raycast)
+    [SerializeField] private LayerMask _cellLayer; 
+    
+    [Header("Уровень")]
+    [SerializeField] private LevelData _currentLevel; // Сюда перетянешь файл Level_1
+
+    [Header("Префабы Фигур (Игрок)")]
+    [SerializeField] private PieceView _playerKnight;
+    [SerializeField] private PieceView _playerQueen;
+    [SerializeField] private PieceView _playerBishop;
+    [SerializeField] private PieceView _playerKing;
+    [SerializeField] private PieceView _playerRook;
+    [SerializeField] private PieceView _playerPawn;
+    // Добавь сюда остальные префабы игрока: _playerRook, _playerPawn и т.д.
+
+    [Header("Префабы Фигур (Враг)")]
+    [SerializeField] private PieceView _enemyRook;
+    [SerializeField] private PieceView _enemyPawn;// Слой, на котором находятся клетки (для Raycast)
+    [SerializeField] private PieceView _enemyKnight;
+    [SerializeField] private PieceView _enemyBishop;
+    [SerializeField] private PieceView _enemyQueen;
+    [SerializeField] private PieceView _enemyKing;
 
     private ChessEngine _engine;
     private Dictionary<Vector2Int, CellView> _cellViews = new Dictionary<Vector2Int, CellView>();
@@ -23,76 +41,158 @@ public class GameController : MonoBehaviour
 
     private void Start()
     {
-        GenerateBoard(8, 8);
-        SpawnPlayerPiece(new Vector2Int(0, 0));
-        
-        // Спавним тестового врага на (3, 3)
-        SpawnEnemyPiece(new Vector2Int(3, 3), PieceType.Rook, _enemyRookPrefab);
+        if (_currentLevel != null)
+        {
+            LoadLevel(_currentLevel);
+        }
+        else
+        {
+            Debug.LogError("Уровень не назначен!");
+        }
+    }
+    
+    private void LoadLevel(LevelData levelData)
+    {
+        _engine = new ChessEngine(levelData.Width, levelData.Height);
 
-        // Считаем угрозы в самом начале
+        for (int y = 0; y < levelData.Height; y++)
+        {
+            for (int x = 0; x < levelData.Width; x++)
+            {
+                CellSetup setup = levelData.Rows[y].Columns[x];
+                
+                // 1. Настраиваем логику клетки (активна ли она)
+                _engine.GetCell(x, y).IsActive = setup.IsActive;
+
+                // 2. Спавним 3D визуал клетки (если она не активна, можем вообще не спавнить или спавнить другой префаб стены)
+                if (setup.IsActive) 
+                {
+                    Vector3 cellPos = new Vector3(x * _cellSize, 0, y * _cellSize);
+                    CellView cellView = Instantiate(_cellPrefab, cellPos, Quaternion.identity, transform);
+                    cellView.name = $"Cell {x}_{y}";
+                    cellView.Init(new Vector2Int(x, y), (x + y) % 2 == 0 ? Color.white : Color.gray);
+                    _cellViews.Add(new Vector2Int(x, y), cellView);
+                }
+
+                // 3. Спавним фигуры, если они указаны в конструкторе
+                if (setup.Piece != PieceType.None && setup.Alignment != Alignment.None)
+                {
+                    SpawnPieceFromSetup(new Vector2Int(x, y), setup);
+                }
+            }
+        }
+
+        // Обновляем угрозы после расстановки всех фигур
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
     }
-
-    private void GenerateBoard(int width, int height)
-    {
-        _engine = new ChessEngine(width, height);
-
-        for (int x = 0; x < width; x++)
-        {
-            for (int y = 0; y < height; y++)
-            {
-                // Вычисляем позицию в 3D пространстве
-                Vector3 worldPos = new Vector3(x * _cellSize, 0, y * _cellSize);
-                
-                // Создаем визуал
-                CellView cellView = Instantiate(_cellPrefab, worldPos, Quaternion.identity, transform);
-                cellView.name = $"Cell {x}_{y}";
-                
-                // Делаем доску "шахматной" по цветах для красоты
-                Color baseColor = (x + y) % 2 == 0 ? Color.white : Color.gray;
-                cellView.Init(new Vector2Int(x, y), baseColor);
-
-                _cellViews.Add(new Vector2Int(x, y), cellView);
-            }
-        }
-    }
-
-    private void SpawnPlayerPiece(Vector2Int logicPos)
-    {
-        // 1. Обновляем логику
-        BoardCell cell = _engine.GetCell(logicPos);
-        cell.CurrentPiece = PieceType.Knight;
-        cell.PieceAlignment = Alignment.Player;
-
-        // 2. Обновляем визуал
-        Vector3 worldPos = _cellViews[logicPos].transform.position;
-        worldPos.y += 0.5f; // Поднимаем над клеткой
-        
-        PieceView pieceView = Instantiate(_knightPrefab, worldPos, Quaternion.identity);
-        pieceView.LogicPosition = logicPos;
-        pieceView.Type = PieceType.Knight;
-        pieceView.Alignment = Alignment.Player;
-
-        _pieceViews.Add(logicPos, pieceView);
-    }
     
-    private void SpawnEnemyPiece(Vector2Int logicPos, PieceType type, PieceView prefab)
+    private void SpawnPieceFromSetup(Vector2Int logicPos, CellSetup setup)
     {
+        // 1. Записываем в логику
         BoardCell cell = _engine.GetCell(logicPos);
-        cell.CurrentPiece = type;
-        cell.PieceAlignment = Alignment.Enemy;
+        cell.CurrentPiece = setup.Piece;
+        cell.PieceAlignment = setup.Alignment;
 
+        // 2. Выбираем правильный префаб
+        PieceView prefabToSpawn = GetPrefab(setup.Piece, setup.Alignment);
+        if (prefabToSpawn == null) return;
+
+        // 3. Спавним 3D
         Vector3 worldPos = _cellViews[logicPos].transform.position;
         worldPos.y += 0.5f;
         
-        PieceView pieceView = Instantiate(prefab, worldPos, Quaternion.identity);
+        PieceView pieceView = Instantiate(prefabToSpawn, worldPos, Quaternion.identity);
         pieceView.LogicPosition = logicPos;
-        pieceView.Type = type;
-        pieceView.Alignment = Alignment.Enemy;
+        pieceView.Type = setup.Piece;
+        pieceView.Alignment = setup.Alignment;
 
         _pieceViews.Add(logicPos, pieceView);
     }
+
+    // Вспомогательный метод для выбора нужного префаба
+    private PieceView GetPrefab(PieceType type, Alignment alignment)
+    {
+        if (alignment == Alignment.Player)
+        {
+            switch (type)
+            {
+                case PieceType.Knight: return _playerKnight;
+                // case PieceType.Rook: return _playerRook; 
+                // добавь свои префабы
+            }
+        }
+        else if (alignment == Alignment.Enemy)
+        {
+            switch (type)
+            {
+                case PieceType.Rook: return _enemyRook;
+                case PieceType.Pawn: return _enemyPawn;
+                // добавь свои префабы
+            }
+        }
+        return null;
+    }
+
+    // private void GenerateBoard(int width, int height)
+    // {
+    //     _engine = new ChessEngine(width, height);
+    //
+    //     for (int x = 0; x < width; x++)
+    //     {
+    //         for (int y = 0; y < height; y++)
+    //         {
+    //             // Вычисляем позицию в 3D пространстве
+    //             Vector3 worldPos = new Vector3(x * _cellSize, 0, y * _cellSize);
+    //             
+    //             // Создаем визуал
+    //             CellView cellView = Instantiate(_cellPrefab, worldPos, Quaternion.identity, transform);
+    //             cellView.name = $"Cell {x}_{y}";
+    //             
+    //             // Делаем доску "шахматной" по цветах для красоты
+    //             Color baseColor = (x + y) % 2 == 0 ? Color.white : Color.gray;
+    //             cellView.Init(new Vector2Int(x, y), baseColor);
+    //
+    //             _cellViews.Add(new Vector2Int(x, y), cellView);
+    //         }
+    //     }
+    // }
+
+    // private void SpawnPlayerPiece(Vector2Int logicPos)
+    // {
+    //     // 1. Обновляем логику
+    //     BoardCell cell = _engine.GetCell(logicPos);
+    //     cell.CurrentPiece = PieceType.Knight;
+    //     cell.PieceAlignment = Alignment.Player;
+    //
+    //     // 2. Обновляем визуал
+    //     Vector3 worldPos = _cellViews[logicPos].transform.position;
+    //     worldPos.y += 0.5f; // Поднимаем над клеткой
+    //     
+    //     PieceView pieceView = Instantiate(_knightPrefab, worldPos, Quaternion.identity);
+    //     pieceView.LogicPosition = logicPos;
+    //     pieceView.Type = PieceType.Knight;
+    //     pieceView.Alignment = Alignment.Player;
+    //
+    //     _pieceViews.Add(logicPos, pieceView);
+    // }
+    
+    // private void SpawnEnemyPiece(Vector2Int logicPos, PieceType type, PieceView prefab)
+    // {
+    //     BoardCell cell = _engine.GetCell(logicPos);
+    //     cell.CurrentPiece = type;
+    //     cell.PieceAlignment = Alignment.Enemy;
+    //
+    //     Vector3 worldPos = _cellViews[logicPos].transform.position;
+    //     worldPos.y += 0.5f;
+    //     
+    //     PieceView pieceView = Instantiate(prefab, worldPos, Quaternion.identity);
+    //     pieceView.LogicPosition = logicPos;
+    //     pieceView.Type = type;
+    //     pieceView.Alignment = Alignment.Enemy;
+    //
+    //     _pieceViews.Add(logicPos, pieceView);
+    // }
 
     private void Update()
     {
@@ -272,21 +372,20 @@ public class GameController : MonoBehaviour
         DeselectPiece();
         _isAnimating = true;
 
-        // --- ЛОГИКА РУБКИ ВРАГА ---
+        // --- ЛОГИКА РУБКИ ВРАГА ИГРОКОМ ---
         if (_pieceViews.TryGetValue(toPos, out PieceView enemyPiece))
         {
             if (enemyPiece.Alignment == Alignment.Enemy)
             {
-                // Уничтожаем 3D объект врага (здесь можно добавить партиклы взрыва)
                 Destroy(enemyPiece.gameObject);
                 _pieceViews.Remove(toPos);
             }
         }
 
-        // 1. Двигаем в логике движка
+        // 1. Двигаем игрока в логике движка
         _engine.MovePiece(fromPos, toPos);
-        
-        // 2. Сразу пересчитываем карту угроз (так как мы могли убить врага или перекрыть линию)
+    
+        // 2. Сразу пересчитываем угрозы (теперь враги видят игрока на новой позиции)
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
 
@@ -296,24 +395,58 @@ public class GameController : MonoBehaviour
         _pieceViews[toPos] = movingPiece;
         movingPiece.LogicPosition = toPos;
 
-        // 4. Анимируем визуал
+        // 4. Анимируем прыжок ИГРОКА
         Vector3 targetWorldPos = _cellViews[toPos].transform.position;
         targetWorldPos.y += 0.5f;
 
         movingPiece.MoveToWorldPosition(targetWorldPos, () => 
         {
-            _isAnimating = false; 
+            BoardCell currentCell = _engine.GetCell(toPos);
 
             // --- ЛОГИКА СМЕРТИ ИГРОКА ---
-            if (_engine.GetCell(toPos).IsUnderEnemyAttack)
+            if (currentCell.IsUnderEnemyAttack)
             {
-                Debug.Log("And he sacrificed THE RULES!!!");
-                _engine.GetCell(toPos).ClearPiece(); // Очищаем логику
-                _pieceViews.Remove(toPos);
-                Destroy(movingPiece.gameObject);     // Уничтожаем 3D модель игрока
-                
-                // Здесь можно вызвать логику проигрыша или перезапуска уровня
+                // Берем первого попавшегося врага, который простреливает эту клетку
+                Vector2Int attackerPos = currentCell.AttackedBy[0];
+            
+                // Вызываем анимацию прыжка врага на игрока
+                ExecuteEnemyRetaliation(attackerPos, toPos, movingPiece);
             }
+            else
+            {
+                _isAnimating = false; // Всё безопасно, возвращаем инпут
+            }
+        });
+    }
+    private void ExecuteEnemyRetaliation(Vector2Int enemyPos, Vector2Int playerPos, PieceView playerPiece)
+    {
+        Debug.Log("Враг наносит ответный удар!");
+
+        // 1. Двигаем врага в логике (он переписывает собой клетку игрока)
+        _engine.MovePiece(enemyPos, playerPos);
+    
+        // Пересчитываем угрозы, так как враг сменил позицию
+        _engine.UpdateThreatMap(); 
+        RefreshBoardThreats();
+
+        // 2. Обновляем словари визуала для врага
+        PieceView retaliatingEnemy = _pieceViews[enemyPos];
+        _pieceViews.Remove(enemyPos);
+        _pieceViews[playerPos] = retaliatingEnemy; // Заменяем игрока в словаре
+        retaliatingEnemy.LogicPosition = playerPos;
+
+        // 3. Анимируем прыжок ВРАГА
+        Vector3 targetWorldPos = _cellViews[playerPos].transform.position;
+        targetWorldPos.y += 0.5f;
+
+        retaliatingEnemy.MoveToWorldPosition(targetWorldPos, () =>
+        {
+            // Когда враг долетел — уничтожаем 3D-модельку игрока
+            Destroy(playerPiece.gameObject);
+        
+            Debug.Log("Игрок убит! GAME OVER");
+            // Здесь пока что просто оставляем _isAnimating = true; 
+            // чтобы заблокировать клики после смерти, пока ты не сделаешь рестарт уровня.
         });
     }
     
