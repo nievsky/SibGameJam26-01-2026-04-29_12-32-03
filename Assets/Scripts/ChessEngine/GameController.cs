@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor; // Нужно для сохранения ScriptableObject
+#endif
 
 public class GameController : MonoBehaviour
 {
@@ -27,6 +30,9 @@ public class GameController : MonoBehaviour
     [SerializeField] private PieceView _enemyBishop;
     [SerializeField] private PieceView _enemyQueen;
     [SerializeField] private PieceView _enemyKing;
+    
+    [Header("Редактор Уровней")]
+    public bool IsEditMode = false;
 
     private ChessEngine _engine;
     private Dictionary<Vector2Int, CellView> _cellViews = new Dictionary<Vector2Int, CellView>();
@@ -65,14 +71,16 @@ public class GameController : MonoBehaviour
                 _engine.GetCell(x, y).IsActive = setup.IsActive;
 
                 // 2. Спавним 3D визуал клетки (если она не активна, можем вообще не спавнить или спавнить другой префаб стены)
-                if (setup.IsActive) 
-                {
-                    Vector3 cellPos = new Vector3(x * _cellSize, 0, y * _cellSize);
-                    CellView cellView = Instantiate(_cellPrefab, cellPos, Quaternion.identity, transform);
-                    cellView.name = $"Cell {x}_{y}";
-                    cellView.Init(new Vector2Int(x, y), (x + y) % 2 == 0 ? Color.white : Color.gray);
-                    _cellViews.Add(new Vector2Int(x, y), cellView);
-                }
+                Vector3 cellPos = new Vector3(x * _cellSize, 0, y * _cellSize);
+                CellView cellView = Instantiate(_cellPrefab, cellPos, Quaternion.identity, transform);
+                cellView.name = $"Cell {x}_{y}";
+    
+                Color baseColor = (x + y) % 2 == 0 ? Color.white : Color.gray;
+                    // ТЕПЕРЬ ПЕРЕДАЕМ setup.IsActive
+                cellView.Init(new Vector2Int(x, y), baseColor, setup.IsActive); 
+    
+                _cellViews.Add(new Vector2Int(x, y), cellView);
+                
 
                 // 3. Спавним фигуры, если они указаны в конструкторе
                 if (setup.Piece != PieceType.None && setup.Alignment != Alignment.None)
@@ -196,11 +204,72 @@ public class GameController : MonoBehaviour
 
     private void Update()
     {
-        if (_isAnimating) return; // Блокируем инпут во время анимации хода
-        HandleHover();      // Сначала обрабатываем наведение
-        HandleMouseInput();
+        // Включение/выключение режима редактора на клавишу TAB
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            IsEditMode = !IsEditMode;
+            Debug.Log(IsEditMode ? "РЕЖИМ РЕДАКТОРА ВКЛЮЧЕН" : "РЕЖИМ РЕДАКТОРА ВЫКЛЮЧЕН");
+            DeselectPiece();
+        }
+
+        if (_isAnimating) return;
+
+        if (IsEditMode)
+        {
+            HandleEditorInput(); // Если редактор включен, перехватываем клики
+        }
+        else
+        {
+            HandleHover();      
+            HandleMouseInput(); 
+        }
     }
 
+    // НОВЫЙ МЕТОД: Логика кликов в режиме редактора
+    private void HandleEditorInput()
+    {
+        if (Input.GetMouseButtonDown(0)) // Левый клик мыши
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+            {
+                if (hit.collider.TryGetComponent(out CellView clickedCell))
+                {
+                    ToggleCellState(clickedCell.LogicPosition);
+                }
+            }
+        }
+    }
+
+    // НОВЫЙ МЕТОД: Переключение клетки и сохранение в файл
+    private void ToggleCellState(Vector2Int pos)
+    {
+        // 1. Получаем текущие данные из загруженного файла
+        CellSetup setup = _currentLevel.Rows[pos.y].Columns[pos.x];
+        
+        // 2. Инвертируем состояние
+        setup.IsActive = !setup.IsActive;
+
+        // 3. Обновляем логику движка
+        _engine.GetCell(pos).IsActive = setup.IsActive;
+
+        // 4. Обновляем визуал на сцене
+        Color baseColor = (pos.x + pos.y) % 2 == 0 ? Color.white : Color.gray;
+        _cellViews[pos].SetActiveState(setup.IsActive, baseColor);
+
+        // 5. Пересчитываем угрозы (если мы убрали или поставили стену, линии атаки могли измениться)
+        _engine.UpdateThreatMap();
+        RefreshBoardThreats();
+
+        // 6. СОХРАНЯЕМ ФАЙЛ SCRIPTABLE OBJECT НА ДИСК
+        #if UNITY_EDITOR
+        EditorUtility.SetDirty(_currentLevel); // Помечаем файл как измененный
+        AssetDatabase.SaveAssets();            // Принудительно сохраняем изменения на диск
+        #endif
+
+        Debug.Log($"Клетка {pos} теперь {(setup.IsActive ? "Активна" : "Стена")}. Файл сохранен.");
+    }
+    
     private void HandleHover()
     {
         Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);

@@ -10,13 +10,25 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 226c77836a8bbc44f8155a49281b6014, type: 3}
-  m_Name: TutorLevel
+  m_Name: TutorLevel1
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   Width: 8
   Height: 8
   Rows:
   - Columns:
     - IsActive: 1
+      Piece: 3
+      Alignment: 1
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
       Piece: 0
       Alignment: 0
     - IsActive: 1
@@ -28,7 +40,45 @@ MonoBehaviour:
     - IsActive: 1
       Piece: 0
       Alignment: 0
+  - Columns:
     - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
       Piece: 0
       Alignment: 0
     - IsActive: 1
@@ -79,58 +129,8 @@ MonoBehaviour:
       Piece: 0
       Alignment: 0
     - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-  - Columns:
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-  - Columns:
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
+      Piece: 1
+      Alignment: 2
     - IsActive: 1
       Piece: 0
       Alignment: 0
