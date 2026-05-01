@@ -31,8 +31,14 @@ public class GameController : MonoBehaviour
     [SerializeField] private PieceView _enemyQueen;
     [SerializeField] private PieceView _enemyKing;
     
+    [Header("Инвентарь и UI")]
+    public List<PieceType> PlayerInventory = new List<PieceType>();
+    
     [Header("Редактор Уровней")]
     public bool IsEditMode = false;
+    
+    // Переменная для хранения выбранной "кисти" в редакторе
+    private PieceType _editorSelectedPiece = PieceType.None;
 
     private ChessEngine _engine;
     private Dictionary<Vector2Int, CellView> _cellViews = new Dictionary<Vector2Int, CellView>();
@@ -126,8 +132,12 @@ public class GameController : MonoBehaviour
             switch (type)
             {
                 case PieceType.Knight: return _playerKnight;
-                // case PieceType.Rook: return _playerRook; 
-                // добавь свои префабы
+                case PieceType.Rook: return _playerRook;
+                // Добавь сюда остальных игроков, когда будут готовы префабы
+                case PieceType.Bishop: return _playerBishop;
+                case PieceType.Queen: return _playerQueen;
+                case PieceType.King: return _playerKing;
+                case PieceType.Pawn: return _playerPawn;
             }
         }
         else if (alignment == Alignment.Enemy)
@@ -136,71 +146,16 @@ public class GameController : MonoBehaviour
             {
                 case PieceType.Rook: return _enemyRook;
                 case PieceType.Pawn: return _enemyPawn;
-                // добавь свои префабы
+                case PieceType.Knight: return _enemyKnight; // Добавили
+                case PieceType.Bishop: return _enemyBishop; // Добавили
+                case PieceType.Queen: return _enemyQueen;   // Добавили
+                case PieceType.King: return _enemyKing;     // Добавили
             }
         }
+        
+        Debug.LogWarning($"Префаб для {type} ({alignment}) не назначен в GetPrefab!");
         return null;
     }
-
-    // private void GenerateBoard(int width, int height)
-    // {
-    //     _engine = new ChessEngine(width, height);
-    //
-    //     for (int x = 0; x < width; x++)
-    //     {
-    //         for (int y = 0; y < height; y++)
-    //         {
-    //             // Вычисляем позицию в 3D пространстве
-    //             Vector3 worldPos = new Vector3(x * _cellSize, 0, y * _cellSize);
-    //             
-    //             // Создаем визуал
-    //             CellView cellView = Instantiate(_cellPrefab, worldPos, Quaternion.identity, transform);
-    //             cellView.name = $"Cell {x}_{y}";
-    //             
-    //             // Делаем доску "шахматной" по цветах для красоты
-    //             Color baseColor = (x + y) % 2 == 0 ? Color.white : Color.gray;
-    //             cellView.Init(new Vector2Int(x, y), baseColor);
-    //
-    //             _cellViews.Add(new Vector2Int(x, y), cellView);
-    //         }
-    //     }
-    // }
-
-    // private void SpawnPlayerPiece(Vector2Int logicPos)
-    // {
-    //     // 1. Обновляем логику
-    //     BoardCell cell = _engine.GetCell(logicPos);
-    //     cell.CurrentPiece = PieceType.Knight;
-    //     cell.PieceAlignment = Alignment.Player;
-    //
-    //     // 2. Обновляем визуал
-    //     Vector3 worldPos = _cellViews[logicPos].transform.position;
-    //     worldPos.y += 0.5f; // Поднимаем над клеткой
-    //     
-    //     PieceView pieceView = Instantiate(_knightPrefab, worldPos, Quaternion.identity);
-    //     pieceView.LogicPosition = logicPos;
-    //     pieceView.Type = PieceType.Knight;
-    //     pieceView.Alignment = Alignment.Player;
-    //
-    //     _pieceViews.Add(logicPos, pieceView);
-    // }
-    
-    // private void SpawnEnemyPiece(Vector2Int logicPos, PieceType type, PieceView prefab)
-    // {
-    //     BoardCell cell = _engine.GetCell(logicPos);
-    //     cell.CurrentPiece = type;
-    //     cell.PieceAlignment = Alignment.Enemy;
-    //
-    //     Vector3 worldPos = _cellViews[logicPos].transform.position;
-    //     worldPos.y += 0.5f;
-    //     
-    //     PieceView pieceView = Instantiate(prefab, worldPos, Quaternion.identity);
-    //     pieceView.LogicPosition = logicPos;
-    //     pieceView.Type = type;
-    //     pieceView.Alignment = Alignment.Enemy;
-    //
-    //     _pieceViews.Add(logicPos, pieceView);
-    // }
 
     private void Update()
     {
@@ -228,47 +183,86 @@ public class GameController : MonoBehaviour
     // НОВЫЙ МЕТОД: Логика кликов в режиме редактора
     private void HandleEditorInput()
     {
-        if (Input.GetMouseButtonDown(0)) // Левый клик мыши
+        if (Input.GetMouseButtonDown(0)) // Левый клик - основное действие
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit, 100f))
             {
+                Vector2Int? targetPos = null;
+
+                // Проверяем, попали мы в клетку или сразу в фигуру на ней
                 if (hit.collider.TryGetComponent(out CellView clickedCell))
+                    targetPos = clickedCell.LogicPosition;
+                else if (hit.collider.TryGetComponent(out PieceView clickedPiece))
+                    targetPos = clickedPiece.LogicPosition;
+
+                if (targetPos.HasValue)
                 {
-                    ToggleCellState(clickedCell.LogicPosition);
+                    ProcessEditorClick(targetPos.Value);
                 }
             }
         }
+        else if (Input.GetMouseButtonDown(1)) // Правый клик - сбросить кисть фигуры
+        {
+            _editorSelectedPiece = PieceType.None;
+            Debug.Log("Редактор: Кисть сброшена (режим строительства стен)");
+        }
     }
-
-    // НОВЫЙ МЕТОД: Переключение клетки и сохранение в файл
-    private void ToggleCellState(Vector2Int pos)
+    
+    private void ProcessEditorClick(Vector2Int pos)
     {
-        // 1. Получаем текущие данные из загруженного файла
         CellSetup setup = _currentLevel.Rows[pos.y].Columns[pos.x];
-        
-        // 2. Инвертируем состояние
-        setup.IsActive = !setup.IsActive;
+        BoardCell logicCell = _engine.GetCell(pos);
 
-        // 3. Обновляем логику движка
-        _engine.GetCell(pos).IsActive = setup.IsActive;
+        // СЦЕНАРИЙ 1: На клетке стоит фигура -> Удаляем её
+        if (!logicCell.IsEmpty)
+        {
+            setup.Piece = PieceType.None;
+            setup.Alignment = Alignment.None;
+            logicCell.ClearPiece();
+            
+            if (_pieceViews.TryGetValue(pos, out PieceView pieceToRemove))
+            {
+                Destroy(pieceToRemove.gameObject);
+                _pieceViews.Remove(pos);
+            }
+        }
+        // СЦЕНАРИЙ 2: Клетка пуста, активна и выбрана "кисть" фигуры -> Ставим врага
+        else if (setup.IsActive && _editorSelectedPiece != PieceType.None)
+        {
+            setup.Piece = _editorSelectedPiece;
+            setup.Alignment = Alignment.Enemy; // По умолчанию дизайнер расставляет врагов
+            
+            SpawnPieceFromSetup(pos, setup);
+        }
+        // СЦЕНАРИЙ 3: Клетка пуста, активна, кисть НЕ выбрана -> Делаем стену (неактивной)
+        else if (setup.IsActive && _editorSelectedPiece == PieceType.None)
+        {
+            setup.IsActive = false;
+            logicCell.IsActive = false;
+            _cellViews[pos].SetActiveState(false, Color.black); // Или передай сюда свой _inactiveColor
+        }
+        // СЦЕНАРИЙ 4: Клетка неактивна (стена) -> Делаем активной (пол)
+        else if (!setup.IsActive)
+        {
+            setup.IsActive = true;
+            logicCell.IsActive = true;
+            Color baseColor = (pos.x + pos.y) % 2 == 0 ? Color.white : Color.gray;
+            _cellViews[pos].SetActiveState(true, baseColor);
+        }
 
-        // 4. Обновляем визуал на сцене
-        Color baseColor = (pos.x + pos.y) % 2 == 0 ? Color.white : Color.gray;
-        _cellViews[pos].SetActiveState(setup.IsActive, baseColor);
-
-        // 5. Пересчитываем угрозы (если мы убрали или поставили стену, линии атаки могли измениться)
+        // Обновляем красную подсветку угроз после любых изменений
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
 
-        // 6. СОХРАНЯЕМ ФАЙЛ SCRIPTABLE OBJECT НА ДИСК
+        // СОХРАНЯЕМ ФАЙЛ SCRIPTABLE OBJECT
         #if UNITY_EDITOR
-        EditorUtility.SetDirty(_currentLevel); // Помечаем файл как измененный
-        AssetDatabase.SaveAssets();            // Принудительно сохраняем изменения на диск
+        EditorUtility.SetDirty(_currentLevel);
+        AssetDatabase.SaveAssets();
         #endif
-
-        Debug.Log($"Клетка {pos} теперь {(setup.IsActive ? "Активна" : "Стена")}. Файл сохранен.");
     }
+
+    // НОВЫЙ МЕТОД: Переключение клетки и сохранение в фай
     
     private void HandleHover()
     {
@@ -446,6 +440,14 @@ public class GameController : MonoBehaviour
         {
             if (enemyPiece.Alignment == Alignment.Enemy)
             {
+                // ДОБАВЛЯЕМ В ИНВЕНТАРЬ (если такой фигуры еще нет)
+                if (!PlayerInventory.Contains(enemyPiece.Type))
+                {
+                    PlayerInventory.Add(enemyPiece.Type);
+                    Debug.Log($"В инвентарь добавлена новая карточка: {enemyPiece.Type}");
+                    // Здесь в будущем можно вызвать обновление UI (показать новую кнопку)
+                }
+
                 Destroy(enemyPiece.gameObject);
                 _pieceViews.Remove(toPos);
             }
@@ -529,5 +531,81 @@ public class GameController : MonoBehaviour
             view.IsThreatened = _engine.GetCell(pos).IsUnderEnemyAttack;
             view.ResetHighlight(); // Перекрасит клетку в _threatColor, если IsThreatened == true
         }
+    }
+    
+    public void OnCardClicked(int typeIndex)
+    {
+        // Конвертируем цифру обратно в тип фигуры
+        PieceType type = (PieceType)typeIndex;
+
+        if (IsEditMode)
+        {
+            _editorSelectedPiece = type;
+            Debug.Log($"Редактор: Выбрана кисть - {type}");
+        }
+        else
+        {
+            if (PlayerInventory.Contains(type))
+            {
+                SwapPlayerPiece(type);
+            }
+        }
+    }
+    
+    private void SwapPlayerPiece(PieceType newType)
+    {
+        // 1. Ищем, где сейчас стоит игрок
+        Vector2Int playerPos = Vector2Int.zero;
+        bool foundPlayer = false;
+        
+        foreach (var kvp in _pieceViews)
+        {
+            if (kvp.Value.Alignment == Alignment.Player)
+            {
+                playerPos = kvp.Key;
+                foundPlayer = true;
+                break;
+            }
+        }
+
+        if (!foundPlayer) return;
+
+        // 2. ПРОВЕРЯЕМ ПРЕФАБ ДО ТОГО КАК УДАЛЯТЬ СТАРУЮ ФИГУРУ!
+        PieceView newPrefab = GetPrefab(newType, Alignment.Player);
+        if (newPrefab == null) 
+        {
+            Debug.LogError($"МОРФ ОТМЕНЕН: Префаб для {newType} не найден! Проверь метод GetPrefab и инспектор.");
+            return; 
+        }
+
+        // 3. Обновляем логический движок
+        _engine.GetCell(playerPos).CurrentPiece = newType;
+
+        // 4. Удаляем старую 3D-модель
+        PieceView oldView = _pieceViews[playerPos];
+        Destroy(oldView.gameObject);
+        _pieceViews.Remove(playerPos);
+
+        // 5. Спавним новую 3D-модель
+        Vector3 worldPos = _cellViews[playerPos].transform.position;
+        worldPos.y += 0.5f;
+
+        PieceView newView = Instantiate(newPrefab, worldPos, Quaternion.identity);
+        newView.LogicPosition = playerPos;
+        newView.Type = newType;
+        newView.Alignment = Alignment.Player;
+        _pieceViews.Add(playerPos, newView);
+
+        // 6. Перерисовываем подсветку ходов, если игрок был выделен
+        if (_selectedPiece != null && _selectedPiece.LogicPosition == playerPos)
+        {
+            SelectPiece(playerPos);
+        }
+
+        // Обновляем угрозы, так как у новой фигуры другие линии перекрытия
+        _engine.UpdateThreatMap();
+        RefreshBoardThreats();
+
+        Debug.Log($"МОРФ: Фигура игрока изменена на {newType}");
     }
 }

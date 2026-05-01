@@ -25,29 +25,7 @@ MonoBehaviour:
     - IsActive: 1
       Piece: 0
       Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-  - Columns:
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
+    - IsActive: 0
       Piece: 0
       Alignment: 0
     - IsActive: 0
@@ -62,74 +40,62 @@ MonoBehaviour:
     - IsActive: 1
       Piece: 0
       Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
   - Columns:
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 0
-      Piece: 0
-      Alignment: 0
-    - IsActive: 0
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-  - Columns:
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-  - Columns:
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
-    - IsActive: 1
-      Piece: 0
-      Alignment: 0
     - IsActive: 1
       Piece: 0
       Alignment: 0
     - IsActive: 1
       Piece: 1
+      Alignment: 2
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 2
       Alignment: 2
     - IsActive: 1
       Piece: 0
@@ -140,6 +106,15 @@ MonoBehaviour:
     - IsActive: 1
       Piece: 0
       Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
   - Columns:
     - IsActive: 1
       Piece: 0
@@ -156,6 +131,31 @@ MonoBehaviour:
     - IsActive: 1
       Piece: 0
       Alignment: 0
+    - IsActive: 1
+      Piece: 5
+      Alignment: 2
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 3
+      Alignment: 2
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 4
+      Alignment: 2
     - IsActive: 1
       Piece: 0
       Alignment: 0
