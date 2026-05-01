@@ -651,6 +651,7 @@ GameObject:
   - component: {fileID: 330585545}
   - component: {fileID: 330585544}
   - component: {fileID: 330585547}
+  - component: {fileID: 330585548}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -725,13 +726,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.28285912, y: -0, z: -0, w: 0.95916146}
-  m_LocalPosition: {x: 4, y: 6.5, z: -4}
+  m_LocalRotation: {x: 0.38268343, y: 0, z: 0, w: 0.92387956}
+  m_LocalPosition: {x: 0, y: 6.5, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 32.862, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 45, y: 0, z: 0}
 --- !u!114 &330585547
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -776,6 +777,25 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
+--- !u!114 &330585548
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 330585543}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 889f2d44aeae7694dadd28b884832bc0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraController
+  TargetFocusPosition: {x: 0, y: 0, z: 0}
+  _cameraOffset: {x: 0, y: 8, z: -6}
+  _followSpeed: 5
+  EnableEdgePeeking: 0
+  _peekDistance: 3
+  _edgeThreshold: 0.15
+  _peekSpeed: 4
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -1075,6 +1095,10 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1024
   _currentLevel: {fileID: 11400000, guid: 3e8f646833d77df47ac728b225e2afb8, type: 2}
+  CampaignLevels:
+  - {fileID: 11400000, guid: 3e8f646833d77df47ac728b225e2afb8, type: 2}
+  - {fileID: 11400000, guid: 28592d43a4330ef47a7fa9e6b0547a9f, type: 2}
+  - {fileID: 11400000, guid: 860eb92adb725e14e891671bf7f42db4, type: 2}
   _playerKnight: {fileID: 2723877339958267016, guid: 5a2b8206d2e41614cbe8535e8ffa7fd9, type: 3}
   _playerQueen: {fileID: 4703460368975974312, guid: 7419d94bd8210fd4499179bf14909e95, type: 3}
   _playerBishop: {fileID: 167033622096982765, guid: 9a44c8b4112356f4da2a1c7877038f28, type: 3}
@@ -1089,6 +1113,7 @@ MonoBehaviour:
   _enemyKing: {fileID: 3001894913901296963, guid: 2bf13dd9c8960684bb1f9a0078071b26, type: 3}
   PlayerInventory: 
   IsEditMode: 0
+  _cameraController: {fileID: 330585548}
 --- !u!4 &595047572
 Transform:
   m_ObjectHideFlags: 0

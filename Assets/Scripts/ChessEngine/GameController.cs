@@ -11,8 +11,10 @@ public class GameController : MonoBehaviour
     [SerializeField] private float _cellSize = 1.1f;  // Расстояние между 3D клетками
     [SerializeField] private LayerMask _cellLayer; 
     
-    [Header("Уровень")]
-    [SerializeField] private LevelData _currentLevel; // Сюда перетянешь файл Level_1
+    [Header("Кампания")]
+    [SerializeField] private LevelData _currentLevel;
+    public List<LevelData> CampaignLevels; // Перетащи сюда все свои файлы уровней по порядку
+    private int _currentLevelIndex = 0;
 
     [Header("Префабы Фигур (Игрок)")]
     [SerializeField] private PieceView _playerKnight;
@@ -33,9 +35,13 @@ public class GameController : MonoBehaviour
     
     [Header("Инвентарь и UI")]
     public List<PieceType> PlayerInventory = new List<PieceType>();
+    private List<PieceType> _inventoryAtLevelStart = new List<PieceType>();
     
     [Header("Редактор Уровней")]
     public bool IsEditMode = false;
+    
+    [Header("Ссылки на системы")]
+    [SerializeField] private CameraController _cameraController;
     
     // Переменная для хранения выбранной "кисти" в редакторе
     private PieceType _editorSelectedPiece = PieceType.None;
@@ -53,18 +59,20 @@ public class GameController : MonoBehaviour
 
     private void Start()
     {
-        if (_currentLevel != null)
+        // Если в кампании есть уровни - грузим первый, иначе грузим то, что в _currentLevel
+        if (CampaignLevels != null && CampaignLevels.Count > 0)
+        {
+            LoadLevel(CampaignLevels[0]);
+        }
+        else if (_currentLevel != null)
         {
             LoadLevel(_currentLevel);
-        }
-        else
-        {
-            Debug.LogError("Уровень не назначен!");
         }
     }
     
     private void LoadLevel(LevelData levelData)
     {
+        _currentLevel = levelData; // Обновляем ссылку, чтобы редактор знал, куда сохранять!
         _engine = new ChessEngine(levelData.Width, levelData.Height);
 
         for (int y = 0; y < levelData.Height; y++)
@@ -99,6 +107,8 @@ public class GameController : MonoBehaviour
         // Обновляем угрозы после расстановки всех фигур
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
+        
+        _inventoryAtLevelStart = new List<PieceType>(PlayerInventory);
     }
     
     private void SpawnPieceFromSetup(Vector2Int logicPos, CellSetup setup)
@@ -107,7 +117,15 @@ public class GameController : MonoBehaviour
         BoardCell cell = _engine.GetCell(logicPos);
         cell.CurrentPiece = setup.Piece;
         cell.PieceAlignment = setup.Alignment;
-
+        
+        if (setup.Alignment == Alignment.Player && !PlayerInventory.Contains(setup.Piece))
+        {
+            PlayerInventory.Add(setup.Piece);
+            Debug.Log($"Стартовая фигура добавлена в инвентарь: {setup.Piece}");
+        }
+        
+        UpdateCameraFocus(logicPos);
+        
         // 2. Выбираем правильный префаб
         PieceView prefabToSpawn = GetPrefab(setup.Piece, setup.Alignment);
         if (prefabToSpawn == null) return;
@@ -122,6 +140,8 @@ public class GameController : MonoBehaviour
         pieceView.Alignment = setup.Alignment;
 
         _pieceViews.Add(logicPos, pieceView);
+        
+        
     }
 
     // Вспомогательный метод для выбора нужного префаба
@@ -469,23 +489,29 @@ public class GameController : MonoBehaviour
         // 4. Анимируем прыжок ИГРОКА
         Vector3 targetWorldPos = _cellViews[toPos].transform.position;
         targetWorldPos.y += 0.5f;
+        
+        UpdateCameraFocus(toPos);
 
         movingPiece.MoveToWorldPosition(targetWorldPos, () => 
         {
             BoardCell currentCell = _engine.GetCell(toPos);
 
-            // --- ЛОГИКА СМЕРТИ ИГРОКА ---
             if (currentCell.IsUnderEnemyAttack)
             {
-                // Берем первого попавшегося врага, который простреливает эту клетку
+                // Попали в ловушку - враг прыгает на нас
                 Vector2Int attackerPos = currentCell.AttackedBy[0];
-            
-                // Вызываем анимацию прыжка врага на игрока
                 ExecuteEnemyRetaliation(attackerPos, toPos, movingPiece);
             }
             else
             {
-                _isAnimating = false; // Всё безопасно, возвращаем инпут
+                _isAnimating = false; // Возвращаем инпут
+
+                // --- НОВАЯ ПРОВЕРКА НА ШАХ ---
+                if (IsEnemyKingInCheck())
+                {
+                    Debug.Log("ШАХ ВРАЖЕСКОМУ КОРОЛЮ!");
+                    LoadNextLevel();
+                }
             }
         });
     }
@@ -512,12 +538,8 @@ public class GameController : MonoBehaviour
 
         retaliatingEnemy.MoveToWorldPosition(targetWorldPos, () =>
         {
-            // Когда враг долетел — уничтожаем 3D-модельку игрока
-            Destroy(playerPiece.gameObject);
-        
-            Debug.Log("Игрок убит! GAME OVER");
-            // Здесь пока что просто оставляем _isAnimating = true; 
-            // чтобы заблокировать клики после смерти, пока ты не сделаешь рестарт уровня.
+            Destroy(playerPiece.gameObject); // Убиваем модельку игрока
+            RestartLevel();                  // <--- ЗАПУСКАЕМ РЕСТАРТ!
         });
     }
     
@@ -605,7 +627,109 @@ public class GameController : MonoBehaviour
         // Обновляем угрозы, так как у новой фигуры другие линии перекрытия
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
+        
+        _engine.UpdateThreatMap();
+        RefreshBoardThreats();
 
         Debug.Log($"МОРФ: Фигура игрока изменена на {newType}");
+
+        // --- НОВАЯ ПРОВЕРКА НА ШАХ ПОСЛЕ ПРЕВРАЩЕНИЯ ---
+        if (IsEnemyKingInCheck())
+        {
+            Debug.Log("ШАХ ПОСЛЕ ПРЕВРАЩЕНИЯ!");
+            LoadNextLevel();
+        }
+        
+        UpdateCameraFocus(playerPos);
+    }
+    
+    private void ClearBoard()
+    {
+        // Уничтожаем все 3D объекты со сцены
+        foreach (var cell in _cellViews.Values) Destroy(cell.gameObject);
+        foreach (var piece in _pieceViews.Values) Destroy(piece.gameObject);
+        
+        // Очищаем словари
+        _cellViews.Clear();
+        _pieceViews.Clear();
+        _selectedPiece = null;
+        _currentValidMoves.Clear();
+        _isAnimating = false;
+    }
+
+    private void RestartLevel()
+    {
+        Debug.Log("--- РЕСТАРТ УРОВНЯ ---");
+        // Откатываем инвентарь к тому состоянию, каким он был в начале уровня
+        PlayerInventory = new List<PieceType>(_inventoryAtLevelStart); 
+        
+        ClearBoard();
+        LoadLevel(_currentLevel); // Перезагружаем текущий файл
+        
+        // --- МГНОВЕННО ПЕРЕНОСИМ КАМЕРУ К ИГРОКУ ---
+        if (_cameraController != null)
+        {
+            _cameraController.SnapToTarget();
+        }
+    }
+
+    private void LoadNextLevel()
+    {
+        _currentLevelIndex++;
+        
+        if (_currentLevelIndex < CampaignLevels.Count)
+        {
+            Debug.Log($"--- ПЕРЕХОД НА УРОВЕНЬ {_currentLevelIndex + 1} ---");
+            ClearBoard();
+            LoadLevel(CampaignLevels[_currentLevelIndex]);
+        }
+        else
+        {
+            Debug.Log("ПОБЕДА! Кампания пройдена!");
+            ClearBoard(); // Очищаем доску в конце игры
+        }
+    }
+    
+    private bool IsEnemyKingInCheck()
+    {
+        // 1. Ищем позицию игрока
+        Vector2Int playerPos = Vector2Int.zero;
+        bool found = false;
+        foreach (var kvp in _pieceViews)
+        {
+            if (kvp.Value.Alignment == Alignment.Player)
+            {
+                playerPos = kvp.Key;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found) return false;
+
+        // 2. Получаем все клетки, которые простреливает игрок
+        // Передаем isForThreatMap = true, так как нас интересует ЗОНА АТАКИ (важно для Пешки!)
+        List<Vector2Int> attackRange = _engine.GetValidMoves(playerPos, true);
+        
+        // 3. Проверяем, стоит ли на одной из этих клеток Король
+        foreach (Vector2Int target in attackRange)
+        {
+            BoardCell cell = _engine.GetCell(target);
+            if (cell.HasEnemy && cell.CurrentPiece == PieceType.King)
+            {
+                return true; // ШАХ!
+            }
+        }
+        return false;
+    }
+    
+    private void UpdateCameraFocus(Vector2Int playerLogicPos)
+    {
+        if (_cameraController != null && _cellViews.ContainsKey(playerLogicPos))
+        {
+            // Берем координаты 3D-клетки, на которой стоит игрок
+            Vector3 worldPos = _cellViews[playerLogicPos].transform.position;
+            _cameraController.TargetFocusPosition = worldPos;
+        }
     }
 }
