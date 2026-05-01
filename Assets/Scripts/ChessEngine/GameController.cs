@@ -6,6 +6,7 @@ public class GameController : MonoBehaviour
     [Header("Prefabs & Setup")]
     [SerializeField] private CellView _cellPrefab;
     [SerializeField] private PieceView _knightPrefab; // Для примера возьмем префаб Коня
+    [SerializeField] private PieceView _enemyRookPrefab;
     [SerializeField] private float _cellSize = 1.1f;  // Расстояние между 3D клетками
     [SerializeField] private LayerMask _cellLayer;    // Слой, на котором находятся клетки (для Raycast)
 
@@ -17,11 +18,20 @@ public class GameController : MonoBehaviour
     private PieceView _selectedPiece = null;
     private List<Vector2Int> _currentValidMoves = new List<Vector2Int>();
     private bool _isAnimating = false;
+    
+    private CellView _currentHoveredCell = null;
 
     private void Start()
     {
         GenerateBoard(8, 8);
         SpawnPlayerPiece(new Vector2Int(0, 0));
+        
+        // Спавним тестового врага на (3, 3)
+        SpawnEnemyPiece(new Vector2Int(3, 3), PieceType.Rook, _enemyRookPrefab);
+
+        // Считаем угрозы в самом начале
+        _engine.UpdateThreatMap();
+        RefreshBoardThreats();
     }
 
     private void GenerateBoard(int width, int height)
@@ -66,63 +76,151 @@ public class GameController : MonoBehaviour
 
         _pieceViews.Add(logicPos, pieceView);
     }
+    
+    private void SpawnEnemyPiece(Vector2Int logicPos, PieceType type, PieceView prefab)
+    {
+        BoardCell cell = _engine.GetCell(logicPos);
+        cell.CurrentPiece = type;
+        cell.PieceAlignment = Alignment.Enemy;
+
+        Vector3 worldPos = _cellViews[logicPos].transform.position;
+        worldPos.y += 0.5f;
+        
+        PieceView pieceView = Instantiate(prefab, worldPos, Quaternion.identity);
+        pieceView.LogicPosition = logicPos;
+        pieceView.Type = type;
+        pieceView.Alignment = Alignment.Enemy;
+
+        _pieceViews.Add(logicPos, pieceView);
+    }
 
     private void Update()
     {
         if (_isAnimating) return; // Блокируем инпут во время анимации хода
-
+        HandleHover();      // Сначала обрабатываем наведение
         HandleMouseInput();
     }
 
-    private void HandleMouseInput()
+    private void HandleHover()
     {
-        if (Input.GetMouseButtonDown(0))
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+    
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f))
         {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-        
-            // Убираем ограничение по _cellLayer, чтобы луч мог попадать и по самим фигурам
-            if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+            // Пытаемся получить клетку (напрямую или через фигуру, стоящую на ней)
+            CellView targetCell = null;
+
+            if (hit.collider.TryGetComponent(out CellView hitCell))
             {
-                // 1. Проверяем, кликнули ли мы прямо по 3D-модели фигуры
-                if (hit.collider.TryGetComponent(out PieceView clickedPiece))
+                targetCell = hitCell;
+            }
+            else if (hit.collider.TryGetComponent(out PieceView hitPiece))
+            {
+                targetCell = _cellViews[hitPiece.LogicPosition];
+            }
+
+            // Если мы навелись на новую клетку
+            if (targetCell != null && targetCell != _currentHoveredCell)
+            {
+                ClearHover(); // Очищаем старую
+                _currentHoveredCell = targetCell;
+
+                // Подсвечиваем как Hover ТОЛЬКО если эта клетка сейчас не подсвечена как валидный ход/атака
+                if (!_currentValidMoves.Contains(_currentHoveredCell.LogicPosition))
                 {
-                    if (clickedPiece.Alignment == Alignment.Player)
-                    {
-                        SelectPiece(clickedPiece.LogicPosition);
-                        return; // Фигура выделена, прерываем логику
-                    }
+                    _currentHoveredCell.HighlightAsHover();
                 }
+            }
+        }
+        else
+        {
+            ClearHover(); // Мышь ушла с доски
+        }
+    }
 
-                // 2. Если попали по клетке (или пошли на неё после выделения)
-                if (hit.collider.TryGetComponent(out CellView clickedCell))
+    private void ClearHover()
+    {
+        if (_currentHoveredCell != null)
+        {
+            // Восстанавливаем цвет. 
+            // Если клетка является доступным ходом, возвращаем ей цвет хода/атаки.
+            // Если нет — сбрасываем до оригинального (белый/серый).
+            if (_currentValidMoves.Contains(_currentHoveredCell.LogicPosition))
+            {
+                if (_engine.GetCell(_currentHoveredCell.LogicPosition).HasEnemy)
+                    _currentHoveredCell.HighlightAsAttack();
+                else
+                    _currentHoveredCell.HighlightAsMove();
+            }
+            else
+            {
+                _currentHoveredCell.ResetHighlight();
+            }
+        
+            _currentHoveredCell = null;
+        }
+    }
+    
+    private void HandleMouseInput()
+{
+    if (Input.GetMouseButtonDown(0))
+    {
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+        {
+            Vector2Int? targetLogicPos = null;
+
+            // 1. Проверяем, попали ли мы по клетке
+            if (hit.collider.TryGetComponent(out CellView clickedCell))
+            {
+                targetLogicPos = clickedCell.LogicPosition;
+            }
+            // 2. ИЛИ проверяем, попали ли мы по фигуре
+            else if (hit.collider.TryGetComponent(out PieceView clickedPiece))
+            {
+                targetLogicPos = clickedPiece.LogicPosition;
+
+                // Если кликнули по своей фигуре — выделяем её и прерываем логику
+                if (clickedPiece.Alignment == Alignment.Player)
                 {
-                    Vector2Int pos = clickedCell.LogicPosition;
-                    BoardCell logicCell = _engine.GetCell(pos);
+                    SelectPiece(targetLogicPos.Value);
+                    return; 
+                }
+            }
 
-                    // Если фигура УЖЕ выбрана и мы кликаем по подсвеченной клетке — делаем ход
-                    if (_selectedPiece != null && _currentValidMoves.Contains(pos))
-                    {
-                        ExecuteMove(_selectedPiece.LogicPosition, pos);
-                    }
-                    // На случай, если игрок кликнул именно по клетке под своей фигурой, а не по самой фигуре
-                    else if (logicCell.HasPlayer)
-                    {
-                        SelectPiece(pos);
-                    }
-                    else
-                    {
-                        // Кликнули по недоступной клетке — сбрасываем выделение
-                        DeselectPiece();
-                    }
+            // 3. Обрабатываем клик по целевой позиции (неважно, кликнули по самой клетке или по врагу на ней)
+            if (targetLogicPos.HasValue)
+            {
+                Vector2Int pos = targetLogicPos.Value;
+                BoardCell logicCell = _engine.GetCell(pos);
+
+                // Если фигура УЖЕ выбрана и мы кликаем по доступной клетке (даже с врагом) — делаем ход (рубим)
+                if (_selectedPiece != null && _currentValidMoves.Contains(pos))
+                {
+                    ExecuteMove(_selectedPiece.LogicPosition, pos);
+                }
+                // На случай, если игрок кликнул именно по клетке под своей фигурой
+                else if (logicCell.HasPlayer)
+                {
+                    SelectPiece(pos);
+                }
+                else
+                {
+                    DeselectPiece();
                 }
             }
             else
             {
-                // Кликнули вообще мимо доски
-                DeselectPiece();
+                DeselectPiece(); // Попали во что-то левое (например, фон)
             }
         }
+        else
+        {
+            DeselectPiece(); // Клик мимо всего
+        }
     }
+}
 
     private void OnCellClicked(Vector2Int clickedPos)
     {
@@ -172,25 +270,62 @@ public class GameController : MonoBehaviour
     private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
     {
         DeselectPiece();
-        _isAnimating = true; // Блокируем клики
+        _isAnimating = true;
 
-        // 1. Двигаем в логике
+        // --- ЛОГИКА РУБКИ ВРАГА ---
+        if (_pieceViews.TryGetValue(toPos, out PieceView enemyPiece))
+        {
+            if (enemyPiece.Alignment == Alignment.Enemy)
+            {
+                // Уничтожаем 3D объект врага (здесь можно добавить партиклы взрыва)
+                Destroy(enemyPiece.gameObject);
+                _pieceViews.Remove(toPos);
+            }
+        }
+
+        // 1. Двигаем в логике движка
         _engine.MovePiece(fromPos, toPos);
+        
+        // 2. Сразу пересчитываем карту угроз (так как мы могли убить врага или перекрыть линию)
+        _engine.UpdateThreatMap();
+        RefreshBoardThreats();
 
-        // 2. Обновляем словари визуала
+        // 3. Обновляем словари визуала
         PieceView movingPiece = _pieceViews[fromPos];
         _pieceViews.Remove(fromPos);
         _pieceViews[toPos] = movingPiece;
         movingPiece.LogicPosition = toPos;
 
-        // 3. Анимируем визуал
+        // 4. Анимируем визуал
         Vector3 targetWorldPos = _cellViews[toPos].transform.position;
-        targetWorldPos.y += 0.5f; // Офсет по высоте
+        targetWorldPos.y += 0.5f;
 
         movingPiece.MoveToWorldPosition(targetWorldPos, () => 
         {
-            _isAnimating = false; // Разблокируем инпут, когда анимация закончится
-            // Здесь в будущем можно будет передать ход врагам
+            _isAnimating = false; 
+
+            // --- ЛОГИКА СМЕРТИ ИГРОКА ---
+            if (_engine.GetCell(toPos).IsUnderEnemyAttack)
+            {
+                Debug.Log("And he sacrificed THE RULES!!!");
+                _engine.GetCell(toPos).ClearPiece(); // Очищаем логику
+                _pieceViews.Remove(toPos);
+                Destroy(movingPiece.gameObject);     // Уничтожаем 3D модель игрока
+                
+                // Здесь можно вызвать логику проигрыша или перезапуска уровня
+            }
         });
+    }
+    
+    private void RefreshBoardThreats()
+    {
+        foreach (var kvp in _cellViews)
+        {
+            Vector2Int pos = kvp.Key;
+            CellView view = kvp.Value;
+            
+            view.IsThreatened = _engine.GetCell(pos).IsUnderEnemyAttack;
+            view.ResetHighlight(); // Перекрасит клетку в _threatColor, если IsThreatened == true
+        }
     }
 }

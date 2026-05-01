@@ -43,4 +43,6 @@ public class BoardCell
         CurrentPiece = PieceType.None;
         PieceAlignment = Alignment.None;
     }
+    
+    public bool IsUnderEnemyAttack { get; set; } = false;
 }

@@ -46,19 +46,25 @@ public class ChessEngine
         List<Vector2Int> validMoves = new List<Vector2Int>();
         BoardCell startCell = GetCell(startPos);
 
-        if (startCell == null || startCell.IsEmpty || !startCell.HasPlayer)
+        if (startCell == null || startCell.IsEmpty)
             return validMoves;
+
+        Alignment alignment = startCell.PieceAlignment; // Смотрим, чья это фигура
 
         switch (startCell.CurrentPiece)
         {
             case PieceType.Rook:
-                CalculateLinearMoves(startPos, validMoves, new Vector2Int[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right });
+                CalculateLinearMoves(startPos, validMoves,
+                    new Vector2Int[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right }, alignment);
                 break;
             case PieceType.Bishop:
-                CalculateLinearMoves(startPos, validMoves, new Vector2Int[] { new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1) });
+                CalculateLinearMoves(startPos, validMoves,
+                    new Vector2Int[]
+                        { new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1) },
+                    alignment);
                 break;
             case PieceType.Knight:
-                CalculateKnightMoves(startPos, validMoves);
+                CalculateKnightMoves(startPos, validMoves, alignment);
                 break;
         }
 
@@ -66,7 +72,7 @@ public class ChessEngine
     }
 
     // Расчет ходов по линиям (для Ладьи и Слона)
-    private void CalculateLinearMoves(Vector2Int startPos, List<Vector2Int> validMoves, Vector2Int[] directions)
+    private void CalculateLinearMoves(Vector2Int startPos, List<Vector2Int> validMoves, Vector2Int[] directions, Alignment alignment)
     {
         foreach (Vector2Int dir in directions)
         {
@@ -75,31 +81,30 @@ public class ChessEngine
             while (IsWithinBounds(currentPos.x, currentPos.y))
             {
                 BoardCell cell = GetCell(currentPos);
-
-                // Если клетка пассивна (стена) - луч прерывается
                 if (!cell.IsActive) break;
 
                 if (cell.IsEmpty)
                 {
-                    validMoves.Add(currentPos); // Пустая клетка - можно идти
+                    validMoves.Add(currentPos);
                 }
-                else if (cell.HasEnemy)
+                else if (cell.PieceAlignment != alignment) // Если чужая фигура - можем бить
                 {
-                    validMoves.Add(currentPos); // Враг - можно бить
-                    break;                      // Дальше врага пройти нельзя
+                    validMoves.Add(currentPos); 
+                    break; // Дальше врага пройти нельзя
                 }
-                else if (cell.HasPlayer)
+                else if (cell.PieceAlignment == alignment) // Если своя фигура - путь закрыт
                 {
-                    break; // Своя фигура блокирует путь
+                    break; 
                 }
-
                 currentPos += dir;
             }
         }
     }
+    
+    
 
     // Расчет ходов для Коня (прыжки)
-    private void CalculateKnightMoves(Vector2Int startPos, List<Vector2Int> validMoves)
+    private void CalculateKnightMoves(Vector2Int startPos, List<Vector2Int> validMoves, Alignment alignment)
     {
         Vector2Int[] knightOffsets = new Vector2Int[]
         {
@@ -110,16 +115,42 @@ public class ChessEngine
         foreach (Vector2Int offset in knightOffsets)
         {
             Vector2Int targetPos = startPos + offset;
-
             if (IsWithinBounds(targetPos.x, targetPos.y))
             {
                 BoardCell cell = GetCell(targetPos);
-                
-                // Конь может перепрыгивать препятствия, но конечная клетка должна быть активна
-                // и на ней не должно быть союзной фигуры
-                if (cell.IsActive && !cell.HasPlayer)
+                // Конь прыгает, если клетка активна и там НЕТ своей фигуры
+                if (cell.IsActive && cell.PieceAlignment != alignment)
                 {
                     validMoves.Add(targetPos);
+                }
+            }
+        }
+    }
+    
+    public void UpdateThreatMap()
+    {
+        // 1. Очищаем старые угрозы
+        for (int x = 0; x < Width; x++)
+        {
+            for (int y = 0; y < Height; y++)
+            {
+                _grid[x, y].IsUnderEnemyAttack = false;
+            }
+        }
+
+        // 2. Ищем всех врагов и отмечаем клетки, куда они могут ударить
+        for (int x = 0; x < Width; x++)
+        {
+            for (int y = 0; y < Height; y++)
+            {
+                BoardCell cell = _grid[x, y];
+                if (cell.HasEnemy)
+                {
+                    List<Vector2Int> threats = GetValidMoves(cell.Position);
+                    foreach (Vector2Int threatPos in threats)
+                    {
+                        GetCell(threatPos).IsUnderEnemyAttack = true;
+                    }
                 }
             }
         }

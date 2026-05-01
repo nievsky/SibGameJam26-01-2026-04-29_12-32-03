@@ -13,6 +13,9 @@ public class CellView : MonoBehaviour
     [SerializeField] private Color _hoverColor = Color.yellow;
     [SerializeField] private Color _moveColor = Color.green;
     [SerializeField] private Color _attackColor = Color.red;
+    
+    [SerializeField] private Color _threatColor = new Color(0.8f, 0.3f, 0.1f); // Темно-оранжевый/красный
+    public bool IsThreatened { get; set; } = false;
 
     public void Init(Vector2Int logicPos, Color baseColor)
     {
@@ -36,5 +39,9 @@ public class CellView : MonoBehaviour
     public void HighlightAsMove() => SetColor(_moveColor);
     public void HighlightAsAttack() => SetColor(_attackColor);
     public void HighlightAsHover() => SetColor(_hoverColor);
-    public void ResetHighlight() => SetColor(_originalColor);
+    public void ResetHighlight()
+    {
+        // Если клетка под ударом, базовым цветом становится цвет угрозы
+        SetColor(IsThreatened ? _threatColor : _originalColor);
+    }
 }
