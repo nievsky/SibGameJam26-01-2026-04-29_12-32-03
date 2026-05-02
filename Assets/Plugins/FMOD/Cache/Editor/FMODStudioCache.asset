@@ -27,6 +27,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 1585
+--- !u!114 &-6857411632448005060
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/MusicLevel
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/MusicLevel
+  Guid:
+    Data1: 98139478
+    Data2: 1110705721
+    Data3: -1141640515
+    Data4: -2102626398
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 1
+  Is3D: 0
+  IsOneShot: 0
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 74160
 --- !u!114 &-6497051609463547111
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -65,6 +92,33 @@ MonoBehaviour:
   - Name: 
     Value: 854
   Exists: 1
+--- !u!114 &-2065022419641090729
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/MusicMainMenu
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/MusicMainMenu
+  Guid:
+    Data1: -1188750412
+    Data2: 1235869263
+    Data3: 1351326866
+    Data4: -2068657409
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 1
+  Is3D: 0
+  IsOneShot: 0
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 70000
 --- !u!114 &-1052636930168261056
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -111,13 +165,17 @@ MonoBehaviour:
   - {fileID: 8389131620681390702}
   - {fileID: 122095596870691761}
   - {fileID: 4898360538351753928}
+  - {fileID: -6857411632448005060}
+  - {fileID: 2582879083595376772}
+  - {fileID: 2313143598720523226}
+  - {fileID: -2065022419641090729}
   EditorParameters: []
   MasterBanks:
   - {fileID: 3051408238469172288}
   StringsBanks:
   - {fileID: 4960787711833821098}
   cacheVersion: 131848
-  cacheTime: 639133245502605066
+  cacheTime: 639133552299958121
   SerializableEventsDict:
   - key: event:/chess place
     index: 0
@@ -125,6 +183,14 @@ MonoBehaviour:
     index: 1
   - key: event:/chess take
     index: 2
+  - key: event:/MusicLevel
+    index: 3
+  - key: event:/ambience
+    index: 4
+  - key: event:/win
+    index: 5
+  - key: event:/MusicMainMenu
+    index: 6
 --- !u!114 &122095596870691761
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -152,6 +218,60 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 1585
+--- !u!114 &2313143598720523226
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/win
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/win
+  Guid:
+    Data1: -1158939484
+    Data2: 1237599984
+    Data3: 1137048457
+    Data4: -1004038108
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 3750
+--- !u!114 &2582879083595376772
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/ambience
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/ambience
+  Guid:
+    Data1: 1547539833
+    Data2: 1325901322
+    Data3: 1787525529
+    Data4: -101941846
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 1
+  Is3D: 0
+  IsOneShot: 0
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 14700
 --- !u!114 &3051408238469172288
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -167,7 +287,7 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639133245502605066
+  lastModified: 639133552299938102
   FileSizes: []
   Exists: 1
 --- !u!114 &4763241204133092360
@@ -239,10 +359,10 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639133245502605066
+  lastModified: 639133552299958121
   FileSizes:
   - Name: 
-    Value: 854
+    Value: 1102
   Exists: 1
 --- !u!114 &8389131620681390702
 MonoBehaviour:
