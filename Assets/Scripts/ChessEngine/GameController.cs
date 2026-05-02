@@ -79,6 +79,10 @@ public class GameController : MonoBehaviour
         {
             LoadLevel(_currentLevel);
         }
+
+        AudioManager.PlayLevelMusic();
+        AudioManager.PlayAmbience();
+
     }
 
     private void LoadLevel(LevelData levelData)
