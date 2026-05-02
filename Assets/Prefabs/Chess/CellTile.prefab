@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9204471418510486695}
-  m_Layer: 10
+  m_Layer: 8
   m_Name: GameObject
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -44,7 +44,7 @@ GameObject:
   - component: {fileID: 2773859271773208119}
   - component: {fileID: 8511851181686037004}
   - component: {fileID: 6137790292976185183}
-  m_Layer: 10
+  m_Layer: 8
   m_Name: CellTile
   m_TagString: Untagged
   m_Icon: {fileID: 0}

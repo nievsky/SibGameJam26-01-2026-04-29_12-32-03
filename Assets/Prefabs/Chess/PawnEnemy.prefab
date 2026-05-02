@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 3697963771687274943}
   - component: {fileID: 147377495780192771}
   - component: {fileID: 1027436904837231341}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: PawnEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}

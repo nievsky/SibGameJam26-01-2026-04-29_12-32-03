@@ -13,6 +13,9 @@ public class GameController : MonoBehaviour
     [SerializeField] private CellView _cellPrefab;
     [SerializeField] private float _cellSize = 1.1f;
     [SerializeField] private LayerMask _cellLayer;
+    
+    [Header("Настройки мыши")]
+    [SerializeField] private LayerMask _boardLayerMask; // Слой, по которому можно кликать
 
     [Header("Кампания")]
     [SerializeField] private LevelData _currentLevel;
@@ -366,7 +369,7 @@ public class GameController : MonoBehaviour
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
 
-            if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+            if (Physics.Raycast(ray, out RaycastHit hit, 1000f, _boardLayerMask))
             {
                 Vector2Int? targetLogicPos = null;
 

@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 2710262482950637438}
   - component: {fileID: 1177103272189883252}
   - component: {fileID: 4703460368975974312}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: QueenEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}

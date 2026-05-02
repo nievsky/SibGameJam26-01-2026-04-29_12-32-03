@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 8696867632945738139}
   - component: {fileID: 365846941440055009}
   - component: {fileID: 3001894913901296963}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: KingEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}

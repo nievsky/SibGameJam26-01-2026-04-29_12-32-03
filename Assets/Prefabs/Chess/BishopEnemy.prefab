@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 8128444841287626774}
   - component: {fileID: 311410434417499774}
   - component: {fileID: 167033622096982765}
-  m_Layer: 0
+  m_Layer: 10
   m_Name: BishopEnemy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
