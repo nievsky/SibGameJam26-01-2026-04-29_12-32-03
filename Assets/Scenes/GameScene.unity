@@ -1096,9 +1096,14 @@ MonoBehaviour:
     m_Bits: 1024
   _currentLevel: {fileID: 11400000, guid: 3e8f646833d77df47ac728b225e2afb8, type: 2}
   CampaignLevels:
-  - {fileID: 11400000, guid: 3e8f646833d77df47ac728b225e2afb8, type: 2}
-  - {fileID: 11400000, guid: 28592d43a4330ef47a7fa9e6b0547a9f, type: 2}
-  - {fileID: 11400000, guid: 860eb92adb725e14e891671bf7f42db4, type: 2}
+  - {fileID: 11400000, guid: 3f9c7e87b8c7115458f39eba2bd73aaa, type: 2}
+  - {fileID: 11400000, guid: ed073b734e4a97840a28fedc32378555, type: 2}
+  - {fileID: 11400000, guid: 666471e20ab39d8449514e626711e42a, type: 2}
+  - {fileID: 11400000, guid: 23539259803cda1498ee8664ae6373e0, type: 2}
+  - {fileID: 11400000, guid: 333e0fbadc7a45f428734c5677d0605d, type: 2}
+  - {fileID: 11400000, guid: 603c6c5ecd56c0146986994f491644d3, type: 2}
+  - {fileID: 11400000, guid: e72fa0723011b8f40a22b755a158e6f5, type: 2}
+  - {fileID: 11400000, guid: 8c4d40129626a504192a758976d99166, type: 2}
   _playerKnight: {fileID: 2723877339958267016, guid: 5a2b8206d2e41614cbe8535e8ffa7fd9, type: 3}
   _playerQueen: {fileID: 4703460368975974312, guid: 7419d94bd8210fd4499179bf14909e95, type: 3}
   _playerBishop: {fileID: 167033622096982765, guid: 9a44c8b4112356f4da2a1c7877038f28, type: 3}

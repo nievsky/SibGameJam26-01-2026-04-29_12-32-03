@@ -1,0 +1,217 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 226c77836a8bbc44f8155a49281b6014, type: 3}
+  m_Name: Level_08
+  m_EditorClassIdentifier: Assembly-CSharp::LevelData
+  Width: 8
+  Height: 8
+  Rows:
+  - Columns:
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 6
+      Alignment: 1
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 1
+      Piece: 3
+      Alignment: 2
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 1
+      Alignment: 2
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 2
+      Alignment: 2
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 6
+      Alignment: 2
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 6
+      Alignment: 2
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 6
+      Alignment: 2
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 2
+      Alignment: 2
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 3
+      Alignment: 2
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+  - Columns:
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 0
+      Alignment: 0
+    - IsActive: 1
+      Piece: 5
+      Alignment: 2
+    - IsActive: 0
+      Piece: 0
+      Alignment: 0
