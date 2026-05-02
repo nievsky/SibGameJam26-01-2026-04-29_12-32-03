@@ -22,6 +22,10 @@ public class LevelData : ScriptableObject
     [Header("Настройки уровня")]
     [Min(1)] public int Width = 8;  // [Min(1)] не даст поставить размер меньше 1
     [Min(1)] public int Height = 8;
+    
+    [Header("Условия (Очки для звезд)")]
+    public int Star1ScoreThreshold = 10; // Очков для 1-й звезды
+    public int Star2ScoreThreshold = 20; // Очков для 2-й звезды
 
     [Header("Матрица поля (Разверни для настройки)")]
     public LevelRow[] Rows;

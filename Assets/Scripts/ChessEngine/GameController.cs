@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor; // Нужно для сохранения ScriptableObject
 #endif
@@ -43,6 +44,20 @@ public class GameController : MonoBehaviour
     [Header("Ссылки на системы")]
     [SerializeField] private CameraController _cameraController;
     
+    [Header("Прогрессия и Звезды")]
+    public int PointsPerCapture = 10; // Фиксированное количество очков за срубленную фигуру
+    
+    [Header("UI Звезды")]
+    [SerializeField] private Image _starHintIcon;   // Звезда "Без подсказок" (по дефолту горит)
+    [SerializeField] private Image _starScore1Icon; // Звезда за 1-й порог очков
+    [SerializeField] private Image _starScore2Icon; // Звезда за 2-й порог очков
+    [SerializeField] private Color _starActiveColor = Color.yellow;
+    [SerializeField] private Color _starInactiveColor = Color.gray; // Или полупрозрачный черный
+    
+    private int _currentScore = 0;
+    private bool _isHintActive = false;       // Текущее состояние подсказок
+    private bool _hintsUsedThisLevel = false; // Использовал ли игрок подсказку хоть раз за уровень
+    
     // Переменная для хранения выбранной "кисти" в редакторе
     private PieceType _editorSelectedPiece = PieceType.None;
 
@@ -74,6 +89,11 @@ public class GameController : MonoBehaviour
     {
         _currentLevel = levelData; // Обновляем ссылку, чтобы редактор знал, куда сохранять!
         _engine = new ChessEngine(levelData.Width, levelData.Height);
+        
+        // --- СБРОС ПРОГРЕССИИ ---
+        _currentScore = 0;
+        _isHintActive = false;
+        _hintsUsedThisLevel = false;
 
         for (int y = 0; y < levelData.Height; y++)
         {
@@ -109,6 +129,9 @@ public class GameController : MonoBehaviour
         RefreshBoardThreats();
         
         _inventoryAtLevelStart = new List<PieceType>(PlayerInventory);
+        
+        // --- ОБНОВЛЯЕМ UI ПРИ СТАРТЕ ---
+        UpdateStarsUI();
     }
     
     private void SpawnPieceFromSetup(Vector2Int logicPos, CellSetup setup)
@@ -185,6 +208,12 @@ public class GameController : MonoBehaviour
             IsEditMode = !IsEditMode;
             Debug.Log(IsEditMode ? "РЕЖИМ РЕДАКТОРА ВКЛЮЧЕН" : "РЕЖИМ РЕДАКТОРА ВЫКЛЮЧЕН");
             DeselectPiece();
+        }
+        
+        // В дальнейшем забиндить на кнопку в UI, а пока - на клавишу H для удобства тестирования
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            ToggleHints();
         }
 
         if (_isAnimating) return;
@@ -460,12 +489,16 @@ public class GameController : MonoBehaviour
         {
             if (enemyPiece.Alignment == Alignment.Enemy)
             {
-                // ДОБАВЛЯЕМ В ИНВЕНТАРЬ (если такой фигуры еще нет)
+                // Начисляем очки
+                _currentScore += PointsPerCapture;
+                Debug.Log($"Враг срублен! Очки: {_currentScore}");
+                
+                // --- ОБНОВЛЯЕМ UI (могут загореться звезды за очки) ---
+                UpdateStarsUI();
+
                 if (!PlayerInventory.Contains(enemyPiece.Type))
                 {
                     PlayerInventory.Add(enemyPiece.Type);
-                    Debug.Log($"В инвентарь добавлена новая карточка: {enemyPiece.Type}");
-                    // Здесь в будущем можно вызвать обновление UI (показать новую кнопку)
                 }
 
                 Destroy(enemyPiece.gameObject);
@@ -510,6 +543,7 @@ public class GameController : MonoBehaviour
                 if (IsEnemyKingInCheck())
                 {
                     Debug.Log("ШАХ ВРАЖЕСКОМУ КОРОЛЮ!");
+                    EvaluateLevelStars();
                     LoadNextLevel();
                 }
             }
@@ -550,8 +584,11 @@ public class GameController : MonoBehaviour
             Vector2Int pos = kvp.Key;
             CellView view = kvp.Value;
             
-            view.IsThreatened = _engine.GetCell(pos).IsUnderEnemyAttack;
-            view.ResetHighlight(); // Перекрасит клетку в _threatColor, если IsThreatened == true
+            // Клетка светится красным ТОЛЬКО если подсказки включены (или включен редактор)
+            bool shouldShowThreat = IsEditMode || _isHintActive;
+            
+            view.IsThreatened = shouldShowThreat && _engine.GetCell(pos).IsUnderEnemyAttack;
+            view.ResetHighlight(); 
         }
     }
     
@@ -637,6 +674,7 @@ public class GameController : MonoBehaviour
         if (IsEnemyKingInCheck())
         {
             Debug.Log("ШАХ ПОСЛЕ ПРЕВРАЩЕНИЯ!");
+            EvaluateLevelStars();
             LoadNextLevel();
         }
         
@@ -730,6 +768,70 @@ public class GameController : MonoBehaviour
             // Берем координаты 3D-клетки, на которой стоит игрок
             Vector3 worldPos = _cellViews[playerLogicPos].transform.position;
             _cameraController.TargetFocusPosition = worldPos;
+        }
+    }
+    
+    public void ToggleHints()
+    {
+        if (IsEditMode) return; // В редакторе не переключаем
+
+        _isHintActive = !_isHintActive;
+        
+        // Если включили подсказку - отмечаем, что игрок потерял третью звезду
+        if (_isHintActive) 
+        {
+            _hintsUsedThisLevel = true; 
+        }
+
+        RefreshBoardThreats(); // Перерисовываем доску
+        Debug.Log($"Подсказки: {(_isHintActive ? "ВКЛ" : "ВЫКЛ")}. Использованы за уровень: {_hintsUsedThisLevel}");
+        
+        // --- ОБНОВЛЯЕМ UI (звезда за подсказку погаснет) ---
+        UpdateStarsUI();
+    }
+    
+    private void EvaluateLevelStars()
+    {
+        int stars = 0;
+
+        // 1-я звезда (Очки)
+        if (_currentScore >= _currentLevel.Star1ScoreThreshold) stars++;
+        
+        // 2-я звезда (Очки)
+        if (_currentScore >= _currentLevel.Star2ScoreThreshold) stars++;
+        
+        // 3-я звезда (Без подсказок)
+        if (!_hintsUsedThisLevel) stars++;
+
+        Debug.Log("=============================");
+        Debug.Log($"УРОВЕНЬ ПРОЙДЕН! Очки: {_currentScore}");
+        Debug.Log($"Подсказки использованы: {_hintsUsedThisLevel}");
+        Debug.Log($"ПОЛУЧЕНО ЗВЕЗД: {stars} / 3");
+        Debug.Log("=============================");
+        
+        // Здесь в будущем ты сможешь вызвать UI панель победы 
+        // и передать ей количество звезд перед загрузкой следующего уровня
+    }
+    
+    
+    private void UpdateStarsUI()
+    {
+        // 1. Звезда за подсказки (горит, если подсказки НЕ использовались)
+        if (_starHintIcon != null)
+        {
+            _starHintIcon.color = !_hintsUsedThisLevel ? _starActiveColor : _starInactiveColor;
+        }
+
+        // 2. Звезда за первый порог очков
+        if (_starScore1Icon != null)
+        {
+            _starScore1Icon.color = _currentScore >= _currentLevel.Star1ScoreThreshold ? _starActiveColor : _starInactiveColor;
+        }
+
+        // 3. Звезда за второй порог очков
+        if (_starScore2Icon != null)
+        {
+            _starScore2Icon.color = _currentScore >= _currentLevel.Star2ScoreThreshold ? _starActiveColor : _starInactiveColor;
         }
     }
 }
