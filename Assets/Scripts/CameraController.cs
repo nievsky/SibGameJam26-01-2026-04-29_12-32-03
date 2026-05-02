@@ -33,17 +33,18 @@ public class CameraController : MonoBehaviour
     }
 
     // НОВЫЙ МЕТОД: Настройка лимитов камеры под текущий уровень
-    public void SetupBoard(int width, int height, float cellSize)
+    // НОВЫЙ МЕТОД: Принимает готовый центр доски (centerPoint)
+    public void SetupBoard(int width, int height, float cellSize, Vector3 centerPoint)
     {
-        // 1. Находим физический центр уровня
-        _boardCenter = new Vector3((width - 1) * cellSize / 2f, 0, (height - 1) * cellSize / 2f);
+        // 1. Центр доски теперь берем из контроллера
+        _boardCenter = centerPoint;
 
         // 2. Рассчитываем рамки (насколько далеко камере разрешено отъезжать от центра)
         float limitX = Mathf.Max(0, (width * cellSize / 2f) - 2f);
         float limitZ = Mathf.Max(0, (height * cellSize / 2f) - 2f);
         _boardLimits = new Vector2(limitX, limitZ);
 
-        // 3. Динамический зум. Базовая высота 7. Чуть-чуть отдаляем для больших досок, но не больше 13.
+        // 3. Динамический зум. 
         float maxDim = Mathf.Max(width, height);
         float targetHeight = 7f + Mathf.Max(0, maxDim - 8) * 0.3f; 
         targetHeight = Mathf.Clamp(targetHeight, 7f, 13f); 

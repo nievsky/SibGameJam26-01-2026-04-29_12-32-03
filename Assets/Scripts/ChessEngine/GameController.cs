@@ -95,19 +95,19 @@ public class GameController : MonoBehaviour
             for (int x = 0; x < levelData.Width; x++)
             {
                 CellSetup setup = levelData.Rows[y].Columns[x];
-
                 _engine.GetCell(x, y).IsActive = setup.IsActive;
 
-                Vector3 cellPos = new Vector3(x * _cellSize, 0, y * _cellSize);
+                // --- ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЗИЦИИ ---
+                Vector3 cellPos = GetCenteredWorldPosition(x, y, levelData.Width, levelData.Height);
+            
                 CellView cellView = Instantiate(_cellPrefab, cellPos, Quaternion.identity, transform);
                 cellView.name = $"Cell {x}_{y}";
-
+            
                 Color baseColor = (x + y) % 2 == 0 ? Color.white : Color.gray;
-                cellView.Init(new Vector2Int(x, y), baseColor, setup.IsActive);
-
+                cellView.Init(new Vector2Int(x, y), baseColor, setup.IsActive); 
                 _cellViews.Add(new Vector2Int(x, y), cellView);
 
-                if (setup.Piece != PieceType.None && setup.Alignment != Alignment.None)
+                if (setup.IsActive && setup.Piece != PieceType.None && setup.Alignment != Alignment.None)
                 {
                     SpawnPieceFromSetup(new Vector2Int(x, y), setup);
                 }
@@ -117,14 +117,15 @@ public class GameController : MonoBehaviour
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
 
-        _inventoryAtLevelStart = new List<PieceType>(PlayerInventory);
+        _inventoryAtLevelStart = new List<PieceType>(PlayerInventory); 
         
         if (_cameraController != null)
         {
-            _cameraController.SetupBoard(levelData.Width, levelData.Height, _cellSize);
+            // Передаем transform.position как фактический центр доски
+            _cameraController.SetupBoard(levelData.Width, levelData.Height, _cellSize, transform.position);
         }
-
-        UpdateStarsUI();
+        
+        UpdateStarsUI(); 
         FocusCameraOnPlayerInstant();
     }
 
@@ -793,4 +794,17 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
             }
         }
     }
+    
+    private Vector3 GetCenteredWorldPosition(int x, int y, int width, int height)
+    {
+        // Вычисляем, насколько нужно сдвинуть сетку, чтобы ее центр оказался в (0,0)
+        float offsetX = (width - 1) * _cellSize / 2f;
+        float offsetZ = (height - 1) * _cellSize / 2f;
+
+        // Вычисляем локальную позицию и прибавляем позицию самого GameManager (transform.position)
+        Vector3 localPosition = new Vector3(x * _cellSize - offsetX, 0, y * _cellSize - offsetZ);
+        return transform.position + localPosition;
+    }
+    
+    
 }
