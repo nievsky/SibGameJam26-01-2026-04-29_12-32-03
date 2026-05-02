@@ -482,7 +482,7 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
                 return; // Прерываем логику (уровень завершен, ответный удар врага не срабатывает)
             }
 
-            if (isCapture)
+            if (isKingCaptured)
             {
                 AudioManager.PlayCaptureSound(targetWorldPos);
             }
