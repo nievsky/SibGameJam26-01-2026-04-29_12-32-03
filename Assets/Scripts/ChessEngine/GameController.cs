@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Collections;
 using UnityEngine;
+using DG.Tweening;
 using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -46,12 +48,16 @@ public class GameController : MonoBehaviour
     [Header("Прогрессия и Звезды")]
     public int PointsPerCapture = 10;
 
-    [Header("UI Звезды")]
-    [SerializeField] private Image _starHintIcon;
-    [SerializeField] private Image _starScore1Icon;
-    [SerializeField] private Image _starScore2Icon;
-    [SerializeField] private Color _starActiveColor = Color.yellow;
-    [SerializeField] private Color _starInactiveColor = Color.gray;
+    [Header("UI Звезды (DOTween)")]
+    // Перетащи сюда 3 ЗАПОЛНЕННЫЕ звезды (дети пустых контуров) по порядку слева направо
+    [SerializeField] private GameObject[] _filledStarObjects = new GameObject[3]; 
+    [SerializeField] private float _starAnimDuration = 0.4f;
+    [SerializeField] private float _starAnimDelay = 0.2f;
+    
+    [Header("UI Инвентаря")]
+    [SerializeField] private List<InventorySlotUI> _inventorySlots;
+    
+    private int _currentlyDisplayedStars = 0;
 
     private int _currentScore = 0;
     private bool _isHintActive = false;
@@ -129,8 +135,16 @@ public class GameController : MonoBehaviour
             _cameraController.SetupBoard(levelData.Width, levelData.Height, _cellSize, transform.position);
         }
         
+        _currentlyDisplayedStars = 0;
+        foreach (var star in _filledStarObjects)
+        {
+            star.SetActive(false);
+            star.transform.localScale = Vector3.one; // Сброс скейла после DOTween
+        }
+        
         UpdateStarsUI(); 
         FocusCameraOnPlayerInstant();
+        UpdateInventoryUI();
     }
 
     private void SpawnPieceFromSetup(Vector2Int logicPos, CellSetup setup)
@@ -455,6 +469,7 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
                 if (!PlayerInventory.Contains(enemyPiece.Type))
                 {
                     PlayerInventory.Add(enemyPiece.Type);
+                    UpdateInventoryUI();
                 }
 
                 Destroy(enemyPiece.gameObject);
@@ -666,6 +681,8 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
 
         PlayerInventory = new List<PieceType>(_inventoryAtLevelStart);
 
+        UpdateInventoryUI();
+        
         ClearBoard();
         LoadLevel(_currentLevel);
 
@@ -750,34 +767,47 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
 
     private void EvaluateLevelStars()
     {
-        int stars = 0;
-
-        if (_currentScore >= _currentLevel.Star1ScoreThreshold) stars++;
-        if (_currentScore >= _currentLevel.Star2ScoreThreshold) stars++;
-        if (!_hintsUsedThisLevel) stars++;
+        int finalStars = CalculateEarnedStars();
 
         Debug.Log("=============================");
         Debug.Log($"УРОВЕНЬ ПРОЙДЕН! Очки: {_currentScore}");
-        Debug.Log($"Подсказки использованы: {_hintsUsedThisLevel}");
-        Debug.Log($"ПОЛУЧЕНО ЗВЕЗД: {stars} / 3");
+        Debug.Log($"ПОЛУЧЕНО ЗВЕЗД: {finalStars} / 3");
         Debug.Log("=============================");
+
+        // --- ВРЕМЕННОЕ СОХРАНЕНИЕ ПРОГРЕССА ---
+        // Создаем уникальный ключ для уровня (например "LevelProgress_Level_01")
+        string levelKey = $"LevelProgress_{_currentLevel.name}";
+        
+        // Читаем старый рекорд (если его нет, вернет 0)
+        int previousStars = PlayerPrefs.GetInt(levelKey, 0);
+
+        // Сохраняем, только если игрок побил свой рекорд
+        if (finalStars > previousStars)
+        {
+            PlayerPrefs.SetInt(levelKey, finalStars);
+            PlayerPrefs.Save(); // Записываем на диск
+            Debug.Log($"Новый рекорд сохранен! Уровень: {_currentLevel.name}, Звезды: {finalStars}");
+        }
     }
 
     private void UpdateStarsUI()
     {
-        if (_starHintIcon != null)
-        {
-            _starHintIcon.color = !_hintsUsedThisLevel ? _starActiveColor : _starInactiveColor;
-        }
+        int targetStars = CalculateEarnedStars();
 
-        if (_starScore1Icon != null)
+        // Если заработали НОВЫЕ звезды - анимируем их появление
+        if (targetStars > _currentlyDisplayedStars)
         {
-            _starScore1Icon.color = _currentScore >= _currentLevel.Star1ScoreThreshold ? _starActiveColor : _starInactiveColor;
+            StartCoroutine(AnimateStarsRoutine(_currentlyDisplayedStars, targetStars));
+            _currentlyDisplayedStars = targetStars;
         }
-
-        if (_starScore2Icon != null)
+        // Если ПОТЕРЯЛИ звезду (нажали подсказку) - просто гасим последнюю горящую
+        else if (targetStars < _currentlyDisplayedStars)
         {
-            _starScore2Icon.color = _currentScore >= _currentLevel.Star2ScoreThreshold ? _starActiveColor : _starInactiveColor;
+            for (int i = targetStars; i < _currentlyDisplayedStars; i++)
+            {
+                _filledStarObjects[i].SetActive(false);
+            }
+            _currentlyDisplayedStars = targetStars;
         }
     }
     
@@ -810,5 +840,45 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
         return transform.position + localPosition;
     }
     
+    // Метод высчитывает, сколько всего звезд игрок заслужил прямо сейчас
+    private int CalculateEarnedStars()
+    {
+        int stars = 0;
+        if (!_hintsUsedThisLevel) stars++;
+        if (_currentScore >= _currentLevel.Star1ScoreThreshold) stars++;
+        if (_currentScore >= _currentLevel.Star2ScoreThreshold) stars++;
+        return Mathf.Clamp(stars, 0, 3);
+    }
     
+    private IEnumerator AnimateStarsRoutine(int startIdx, int endIdx)
+    {
+        for (int i = startIdx; i < endIdx; i++)
+        {
+            GameObject star = _filledStarObjects[i];
+            star.SetActive(true);
+            
+            // Начинаем с нулевого размера
+            star.transform.localScale = Vector3.zero;
+
+            // TODO (FMOD): Здесь саунд-дизайнер добавит звук появления звезды.
+            // Можно использовать параметр (i), чтобы менять Pitch звука (делать его выше с каждой звездой)
+            // FMODUnity.RuntimeManager.PlayOneShot("event:/UI/Star_Pop");
+
+            // Анимация Bounce (выскакивает чуть больше нужного и возвращается в 1)
+            star.transform.DOScale(Vector3.one, _starAnimDuration).SetEase(Ease.OutBack);
+
+            // Ждем перед появлением следующей
+            yield return new WaitForSeconds(_starAnimDelay);
+        }
+    }
+    
+    private void UpdateInventoryUI()
+    {
+        foreach (var slot in _inventorySlots)
+        {
+            // Карточка разблокирована, если тип фигуры есть в списке инвентаря игрока
+            bool hasPiece = PlayerInventory.Contains(slot.Type);
+            slot.SetUnlocked(hasPiece);
+        }
+    }
 }
