@@ -145,7 +145,7 @@ public class GameController : MonoBehaviour
         if (prefabToSpawn == null) return;
 
         Vector3 worldPos = _cellViews[logicPos].transform.position;
-        worldPos.y += 0.5f;
+        worldPos.y += 0.1f;
 
         PieceView pieceView = Instantiate(prefabToSpawn, worldPos, Quaternion.identity);
         pieceView.LogicPosition = logicPos;
@@ -516,7 +516,7 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
         Debug.Log("Враг наносит ответный удар!");
 
         Vector3 attackPos = _cellViews[playerPos].transform.position;
-        attackPos.y += 0.5f;
+        attackPos.y += 0.1f;
         AudioManager.PlayEnemyAttackSound(attackPos);
 
         _engine.MovePiece(enemyPos, playerPos);
@@ -530,12 +530,12 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
         retaliatingEnemy.LogicPosition = playerPos;
 
         Vector3 targetWorldPos = _cellViews[playerPos].transform.position;
-        targetWorldPos.y += 0.5f;
+        targetWorldPos.y += 0.1f;
 
         retaliatingEnemy.MoveToWorldPosition(targetWorldPos, () =>
         {
             Vector3 deathPos = _cellViews[playerPos].transform.position;
-            deathPos.y += 0.5f;
+            deathPos.y += 0.1f;
             AudioManager.PlayKillSound(deathPos);
             AudioManager.PlayPlaceSound(targetWorldPos);
             Destroy(playerPiece.gameObject);
@@ -606,11 +606,11 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
         _pieceViews.Remove(playerPos);
 
         Vector3 transformPos = _cellViews[playerPos].transform.position;
-        transformPos.y += 0.5f;
+        transformPos.y += 0.1f;
         AudioManager.PlayTransformationSound(transformPos);
 
         Vector3 worldPos = _cellViews[playerPos].transform.position;
-        worldPos.y += 0.5f;
+        worldPos.y += 0.1f;
 
         PieceView newView = Instantiate(newPrefab, worldPos, Quaternion.identity);
         newView.LogicPosition = playerPos;
