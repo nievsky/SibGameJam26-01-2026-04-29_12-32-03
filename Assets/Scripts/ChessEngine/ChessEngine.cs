@@ -54,14 +54,10 @@ public class ChessEngine
         switch (startCell.CurrentPiece)
         {
             case PieceType.Rook:
-                CalculateLinearMoves(startPos, validMoves,
-                    new Vector2Int[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right }, alignment);
+                CalculateLinearMoves(startPos, validMoves, new Vector2Int[] { Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right }, alignment, isForThreatMap);
                 break;
             case PieceType.Bishop:
-                CalculateLinearMoves(startPos, validMoves,
-                    new Vector2Int[]
-                        { new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1) },
-                    alignment);
+                CalculateLinearMoves(startPos, validMoves, new Vector2Int[] { new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1) }, alignment, isForThreatMap);
                 break;
             case PieceType.Knight:
                 CalculateKnightMoves(startPos, validMoves, alignment);
@@ -70,7 +66,7 @@ public class ChessEngine
                 CalculateLinearMoves(startPos, validMoves, new Vector2Int[] { 
                     Vector2Int.up, Vector2Int.down, Vector2Int.left, Vector2Int.right,
                     new Vector2Int(1, 1), new Vector2Int(1, -1), new Vector2Int(-1, 1), new Vector2Int(-1, -1) 
-                }, alignment);
+                }, alignment, isForThreatMap);
                 break;
             case PieceType.King:
                 CalculateKingMoves(startPos, validMoves, alignment);
@@ -84,7 +80,7 @@ public class ChessEngine
     }
 
     // Расчет ходов по линиям (для Ладьи и Слона)
-    private void CalculateLinearMoves(Vector2Int startPos, List<Vector2Int> validMoves, Vector2Int[] directions, Alignment alignment)
+   private void CalculateLinearMoves(Vector2Int startPos, List<Vector2Int> validMoves, Vector2Int[] directions, Alignment alignment, bool isForThreatMap)
     {
         foreach (Vector2Int dir in directions)
         {
@@ -95,39 +91,44 @@ public class ChessEngine
             {
                 BoardCell cell = GetCell(currentPos);
                 
-                // Если уперлись в стену (неактивную клетку)
+                // Уперлись в стену
                 if (!cell.IsActive) 
                 {
-                    // Если перед стеной были пустые клетки - останавливаемся на последней пустой
-                    if (lastValidEmptyCell.HasValue) 
+                    if (!isForThreatMap && lastValidEmptyCell.HasValue) 
                         validMoves.Add(lastValidEmptyCell.Value);
                     break;
                 }
 
                 if (cell.IsEmpty)
                 {
-                    // Запоминаем пустую клетку и скользим дальше
                     lastValidEmptyCell = currentPos;
+                    if (isForThreatMap) validMoves.Add(currentPos); 
                 }
                 else if (cell.PieceAlignment != alignment) 
                 {
-                    // Уперлись во врага - рубим его (останавливаемся на его клетке)
+                    // Уперлись в противника (срубаем его)
                     validMoves.Add(currentPos); 
                     break; 
                 }
                 else if (cell.PieceAlignment == alignment) 
                 {
-                    // Уперлись в свою фигуру - останавливаемся ПЕРЕД ней на последней пустой
-                    if (lastValidEmptyCell.HasValue) 
+                    // Уперлись в СВОЕГО союзника (другого врага)
+                    if (isForThreatMap) 
+                    {
+                        // Если рисуем угрозы - ЭТА КЛЕТКА ТОЖЕ ПОД УДАРОМ/ЗАЩИТОЙ!
+                        validMoves.Add(currentPos); 
+                    }
+                    else if (lastValidEmptyCell.HasValue) 
+                    {
                         validMoves.Add(lastValidEmptyCell.Value);
-                    break; 
+                    }
+                    break; // В любом случае луч останавливается, сквозь союзников стрелять нельзя
                 }
 
                 currentPos += dir;
             }
 
-            // Если мы вылетели за край доски, но перед этим были пустые клетки
-            if (!IsWithinBounds(currentPos.x, currentPos.y) && lastValidEmptyCell.HasValue)
+            if (!isForThreatMap && !IsWithinBounds(currentPos.x, currentPos.y) && lastValidEmptyCell.HasValue)
             {
                 validMoves.Add(lastValidEmptyCell.Value);
             }
@@ -137,7 +138,7 @@ public class ChessEngine
     
 
     // Расчет ходов для Коня (прыжки)
-    private void CalculateKnightMoves(Vector2Int startPos, List<Vector2Int> validMoves, Alignment alignment)
+    private void CalculateKnightMoves(Vector2Int startPos, List<Vector2Int> validMoves, Alignment alignment, bool isForThreatMap = false)
     {
         Vector2Int[] knightOffsets = new Vector2Int[]
         {
@@ -151,16 +152,24 @@ public class ChessEngine
             if (IsWithinBounds(targetPos.x, targetPos.y))
             {
                 BoardCell cell = GetCell(targetPos);
-                // Конь прыгает, если клетка активна и там НЕТ своей фигуры
-                if (cell.IsActive && cell.PieceAlignment != alignment)
+                if (cell.IsActive)
                 {
-                    validMoves.Add(targetPos);
+                    // Если рисуем карту угроз — конь бьет по этой клетке независимо от того, кто там стоит
+                    if (isForThreatMap) 
+                    {
+                        validMoves.Add(targetPos);
+                    }
+                    // Если это ход — идем только туда, где нет союзников
+                    else if (cell.PieceAlignment != alignment) 
+                    {
+                        validMoves.Add(targetPos);
+                    }
                 }
             }
         }
     }
     
-    private void CalculateKingMoves(Vector2Int startPos, List<Vector2Int> validMoves, Alignment alignment)
+    private void CalculateKingMoves(Vector2Int startPos, List<Vector2Int> validMoves, Alignment alignment, bool isForThreatMap = false)
     {
         Vector2Int[] kingDirections = new Vector2Int[]
         {
@@ -174,9 +183,16 @@ public class ChessEngine
             if (IsWithinBounds(targetPos.x, targetPos.y))
             {
                 BoardCell cell = GetCell(targetPos);
-                if (cell.IsActive && cell.PieceAlignment != alignment)
+                if (cell.IsActive)
                 {
-                    validMoves.Add(targetPos);
+                    if (isForThreatMap) 
+                    {
+                        validMoves.Add(targetPos);
+                    }
+                    else if (cell.PieceAlignment != alignment)
+                    {
+                        validMoves.Add(targetPos);
+                    }
                 }
             }
         }

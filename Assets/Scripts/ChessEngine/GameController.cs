@@ -479,21 +479,27 @@ public class GameController : MonoBehaviour
         _currentValidMoves.Clear();
     }
 
-    private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
+private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
     {
         DeselectPiece();
         _isAnimating = true;
+
+        bool isKingCaptured = false; // Флаг победы
 
         // --- ЛОГИКА РУБКИ ВРАГА ИГРОКОМ ---
         if (_pieceViews.TryGetValue(toPos, out PieceView enemyPiece))
         {
             if (enemyPiece.Alignment == Alignment.Enemy)
             {
-                // Начисляем очки
+                // Если мы рубим Короля - запоминаем это!
+                if (enemyPiece.Type == PieceType.King)
+                {
+                    isKingCaptured = true;
+                }
+
                 _currentScore += PointsPerCapture;
                 Debug.Log($"Враг срублен! Очки: {_currentScore}");
-                
-                // --- ОБНОВЛЯЕМ UI (могут загореться звезды за очки) ---
+
                 UpdateStarsUI();
 
                 if (!PlayerInventory.Contains(enemyPiece.Type))
@@ -506,46 +512,47 @@ public class GameController : MonoBehaviour
             }
         }
 
-        // 1. Двигаем игрока в логике движка
+        // 1. Двигаем в логике движка
         _engine.MovePiece(fromPos, toPos);
-    
-        // 2. Сразу пересчитываем угрозы (теперь враги видят игрока на новой позиции)
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
 
-        // 3. Обновляем словари визуала
+        // 2. Обновляем словари визуала
         PieceView movingPiece = _pieceViews[fromPos];
         _pieceViews.Remove(fromPos);
         _pieceViews[toPos] = movingPiece;
         movingPiece.LogicPosition = toPos;
 
-        // 4. Анимируем прыжок ИГРОКА
+        // 3. Обновляем камеру
+        UpdateCameraFocus(toPos);
+
+        // 4. Анимируем визуал
         Vector3 targetWorldPos = _cellViews[toPos].transform.position;
         targetWorldPos.y += 0.5f;
-        
-        UpdateCameraFocus(toPos);
 
         movingPiece.MoveToWorldPosition(targetWorldPos, () => 
         {
+            // --- ПРОВЕРКА ПОБЕДЫ ---
+            if (isKingCaptured)
+            {
+                _isAnimating = false;
+                Debug.Log("КОРОЛЬ ПОВЕРЖЕН! УРОВЕНЬ ПРОЙДЕН!");
+                EvaluateLevelStars();
+                LoadNextLevel();
+                return; // Прерываем логику (уровень завершен, ответный удар врага не срабатывает)
+            }
+
             BoardCell currentCell = _engine.GetCell(toPos);
 
+            // --- ЛОГИКА СМЕРТИ ИГРОКА (если это не победный ход) ---
             if (currentCell.IsUnderEnemyAttack)
             {
-                // Попали в ловушку - враг прыгает на нас
                 Vector2Int attackerPos = currentCell.AttackedBy[0];
                 ExecuteEnemyRetaliation(attackerPos, toPos, movingPiece);
             }
             else
             {
-                _isAnimating = false; // Возвращаем инпут
-
-                // --- НОВАЯ ПРОВЕРКА НА ШАХ ---
-                if (IsEnemyKingInCheck())
-                {
-                    Debug.Log("ШАХ ВРАЖЕСКОМУ КОРОЛЮ!");
-                    EvaluateLevelStars();
-                    LoadNextLevel();
-                }
+                _isAnimating = false; // Возвращаем инпут, если всё безопасно
             }
         });
     }
@@ -669,14 +676,6 @@ public class GameController : MonoBehaviour
         RefreshBoardThreats();
 
         Debug.Log($"МОРФ: Фигура игрока изменена на {newType}");
-
-        // --- НОВАЯ ПРОВЕРКА НА ШАХ ПОСЛЕ ПРЕВРАЩЕНИЯ ---
-        if (IsEnemyKingInCheck())
-        {
-            Debug.Log("ШАХ ПОСЛЕ ПРЕВРАЩЕНИЯ!");
-            EvaluateLevelStars();
-            LoadNextLevel();
-        }
         
         UpdateCameraFocus(playerPos);
     }
