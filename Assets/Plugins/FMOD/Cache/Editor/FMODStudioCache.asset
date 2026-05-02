@@ -92,6 +92,33 @@ MonoBehaviour:
   - Name: 
     Value: 854
   Exists: 1
+--- !u!114 &-2469447557912099501
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/MusicMainMenu
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/MusicMainMenu
+  Guid:
+    Data1: -1188750412
+    Data2: 1235869263
+    Data3: 1351326866
+    Data4: -2068657409
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 1
+  Is3D: 0
+  IsOneShot: 0
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 70000
 --- !u!114 &-2065022419641090729
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -165,17 +192,17 @@ MonoBehaviour:
   - {fileID: 8389131620681390702}
   - {fileID: 122095596870691761}
   - {fileID: 4898360538351753928}
-  - {fileID: -6857411632448005060}
-  - {fileID: 2582879083595376772}
-  - {fileID: 2313143598720523226}
-  - {fileID: -2065022419641090729}
+  - {fileID: 5117024513840096463}
+  - {fileID: 2332071148021845267}
+  - {fileID: 7931089171253944435}
+  - {fileID: -2469447557912099501}
   EditorParameters: []
   MasterBanks:
   - {fileID: 3051408238469172288}
   StringsBanks:
   - {fileID: 4960787711833821098}
   cacheVersion: 131848
-  cacheTime: 639133552299958121
+  cacheTime: 639133534927313679
   SerializableEventsDict:
   - key: event:/chess place
     index: 0
@@ -245,6 +272,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 3750
+--- !u!114 &2332071148021845267
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/ambience
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/ambience
+  Guid:
+    Data1: 1547539833
+    Data2: 1325901322
+    Data3: 1787525529
+    Data4: -101941846
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 1
+  Is3D: 0
+  IsOneShot: 0
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 14700
 --- !u!114 &2582879083595376772
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -287,7 +341,7 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639133552299938102
+  lastModified: 639133534927298604
   FileSizes: []
   Exists: 1
 --- !u!114 &4763241204133092360
@@ -359,11 +413,65 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639133552299958121
+  lastModified: 639133534927313679
   FileSizes:
   - Name: 
     Value: 1102
   Exists: 1
+--- !u!114 &5117024513840096463
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/MusicLevel
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/MusicLevel
+  Guid:
+    Data1: 98139478
+    Data2: 1110705721
+    Data3: -1141640515
+    Data4: -2102626398
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 1
+  Is3D: 0
+  IsOneShot: 0
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 74160
+--- !u!114 &7931089171253944435
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/win
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/win
+  Guid:
+    Data1: -1158939484
+    Data2: 1237599984
+    Data3: 1137048457
+    Data4: -1004038108
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 3750
 --- !u!114 &8389131620681390702
 MonoBehaviour:
   m_ObjectHideFlags: 0
