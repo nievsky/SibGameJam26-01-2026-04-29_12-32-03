@@ -105,19 +105,19 @@ MonoBehaviour:
   m_Name: FMODStudioCache
   m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EventCache
   EditorBanks:
-  - {fileID: -3332299377466177848}
-  - {fileID: -6497051609463547111}
+  - {fileID: 4960787711833821098}
+  - {fileID: 3051408238469172288}
   EditorEvents:
-  - {fileID: -7272108907631855382}
-  - {fileID: 4763241204133092360}
-  - {fileID: -1052636930168261056}
+  - {fileID: 8389131620681390702}
+  - {fileID: 122095596870691761}
+  - {fileID: 4898360538351753928}
   EditorParameters: []
   MasterBanks:
-  - {fileID: -6497051609463547111}
+  - {fileID: 3051408238469172288}
   StringsBanks:
-  - {fileID: -3332299377466177848}
+  - {fileID: 4960787711833821098}
   cacheVersion: 131848
-  cacheTime: 639133253683827793
+  cacheTime: 639133245502605066
   SerializableEventsDict:
   - key: event:/chess place
     index: 0
@@ -125,6 +125,51 @@ MonoBehaviour:
     index: 1
   - key: event:/chess take
     index: 2
+--- !u!114 &122095596870691761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/chess kill
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/chess kill
+  Guid:
+    Data1: 574789090
+    Data2: 1277023430
+    Data3: -107778648
+    Data4: -1378877664
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1585
+--- !u!114 &3051408238469172288
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/Master.bank
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
+  Path: FMOD/Desktop/Master.bank
+  Name: Master
+  StudioPath: bank:/Master
+  lastModified: 639133245502605066
+  FileSizes: []
+  Exists: 1
 --- !u!114 &4763241204133092360
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -145,6 +190,80 @@ MonoBehaviour:
     Data4: -1378877664
   Banks:
   - {fileID: -6497051609463547111}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1585
+--- !u!114 &4898360538351753928
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/chess take
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/chess take
+  Guid:
+    Data1: 450479358
+    Data2: 1335073735
+    Data3: 10695827
+    Data4: 1283406816
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1475
+--- !u!114 &4960787711833821098
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c18180ecb35941f4682ae60107b85b7c, type: 3}
+  m_Name: bank:/Master.strings.bank
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorBankRef
+  Path: FMOD/Desktop/Master.strings.bank
+  Name: Master.strings
+  StudioPath: bank:/Master.strings
+  lastModified: 639133245502605066
+  FileSizes:
+  - Name: 
+    Value: 854
+  Exists: 1
+--- !u!114 &8389131620681390702
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/chess place
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/chess place
+  Guid:
+    Data1: -1680140240
+    Data2: 1184629709
+    Data3: -436466275
+    Data4: -1151168409
+  Banks:
+  - {fileID: 3051408238469172288}
   IsStream: 0
   Is3D: 0
   IsOneShot: 1
