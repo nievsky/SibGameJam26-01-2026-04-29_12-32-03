@@ -473,7 +473,7 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
 
         // 4. Анимируем визуал
         Vector3 targetWorldPos = _cellViews[toPos].transform.position;
-        targetWorldPos.y += 0.5f;
+        targetWorldPos.y += 0.1f;
 
         movingPiece.MoveToWorldPosition(targetWorldPos, () =>
         {
