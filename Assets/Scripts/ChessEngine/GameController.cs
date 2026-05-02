@@ -118,8 +118,14 @@ public class GameController : MonoBehaviour
         RefreshBoardThreats();
 
         _inventoryAtLevelStart = new List<PieceType>(PlayerInventory);
+        
+        if (_cameraController != null)
+        {
+            _cameraController.SetupBoard(levelData.Width, levelData.Height, _cellSize);
+        }
 
         UpdateStarsUI();
+        FocusCameraOnPlayerInstant();
     }
 
     private void SpawnPieceFromSetup(Vector2Int logicPos, CellSetup setup)
@@ -133,8 +139,7 @@ public class GameController : MonoBehaviour
             PlayerInventory.Add(setup.Piece);
             Debug.Log($"Стартовая фигура добавлена в инвентарь: {setup.Piece}");
         }
-
-        UpdateCameraFocus(logicPos);
+        
 
         PieceView prefabToSpawn = GetPrefab(setup.Piece, setup.Alignment);
         if (prefabToSpawn == null) return;
@@ -672,6 +677,7 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
         if (_currentLevelIndex < CampaignLevels.Count)
         {
             Debug.Log($"--- ПЕРЕХОД НА УРОВЕНЬ {_currentLevelIndex + 1} ---");
+            PlayerInventory.Clear();
             ClearBoard();
             LoadLevel(CampaignLevels[_currentLevelIndex]);
         }
@@ -767,6 +773,24 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
         if (_starScore2Icon != null)
         {
             _starScore2Icon.color = _currentScore >= _currentLevel.Star2ScoreThreshold ? _starActiveColor : _starInactiveColor;
+        }
+    }
+    
+    private void FocusCameraOnPlayerInstant()
+    {
+        // Ищем на доске фигуру игрока
+        foreach (var kvp in _pieceViews)
+        {
+            if (kvp.Value.Alignment == Alignment.Player)
+            {
+                UpdateCameraFocus(kvp.Key); // Передаем координаты
+                
+                // Мгновенно телепортируем камеру туда
+                if (_cameraController != null) 
+                    _cameraController.SnapToTarget();
+                
+                break;
+            }
         }
     }
 }
