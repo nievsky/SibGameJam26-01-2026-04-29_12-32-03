@@ -3,6 +3,7 @@ using System.Collections;
 using TMPro;
 using UnityEngine;
 using DG.Tweening;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -67,6 +68,12 @@ public class GameController : MonoBehaviour
     [SerializeField] private GameObject _victoryPanel;
     [SerializeField] private TextMeshProUGUI _levelProgressText;
     [SerializeField] private GameObject[] _victoryStarObjects = new GameObject[3];
+    
+    [Header("Кнопки Победного Экрана")]
+    [SerializeField] private GameObject _nextLevelButton; // Обычная кнопка "Далее"
+    [SerializeField] private GameObject _restartButton;   // Обычная кнопка "Рестарт"
+    [SerializeField] private GameObject _cutsceneButton;  // Финальная кнопка "Катсцена"
+    [SerializeField] private GameObject _mainMenuButton;  // Финальная кнопка "В меню"
     
     [Header("Настройки анимации")]
     [SerializeField] private float _pieceHoverHeight = 0.3f; // Контролируй высоту здесь
@@ -923,16 +930,34 @@ public class GameController : MonoBehaviour
 
     private void ShowVictoryScreen()
     {
-        _isAnimating = true;
+        _isAnimating = true; 
         _victoryPanel.SetActive(true);
+
+        // Проверяем, последний ли это уровень
+        bool isLastLevel = (_currentLevelIndex >= CampaignLevels.Count - 1);
+
+        // Переключаем кнопки в зависимости от того, финал это или нет
+        if (_nextLevelButton != null) _nextLevelButton.SetActive(!isLastLevel);
+        if (_restartButton != null) _restartButton.SetActive(!isLastLevel);
+        if (_cutsceneButton != null) _cutsceneButton.SetActive(isLastLevel);
+        if (_mainMenuButton != null) _mainMenuButton.SetActive(isLastLevel);
 
         if (_levelProgressText != null && CampaignLevels != null)
         {
-            _levelProgressText.text = $"УРОВЕНЬ {_currentLevelIndex + 1}/{CampaignLevels.Count}";
+            if (isLastLevel)
+            {
+                _levelProgressText.text = "ИГРА ПРОЙДЕНА!"; // Особый текст для финала
+            }
+            else
+            {
+                _levelProgressText.text = $"УРОВЕНЬ {_currentLevelIndex + 1} ИЗ {CampaignLevels.Count}";
+            }
         }
 
-        int finalStars = CalculateEarnedStars() + 1;
+        // --- НОВАЯ СИСТЕМА: Берем текущие звезды + 1 за победу ---
+        int finalStars = CalculateEarnedStars() + 1; 
 
+        // Сохраняем рекорд
         string levelKey = $"LevelProgress_{_currentLevel.name}";
         int previousStars = PlayerPrefs.GetInt(levelKey, 0);
         if (finalStars > previousStars)
@@ -948,6 +973,29 @@ public class GameController : MonoBehaviour
         }
 
         StartCoroutine(AnimateVictoryStarsRoutine(finalStars));
+    }
+    
+    public void UI_MainMenuButton()
+    {
+        _victoryPanel.SetActive(false);
+        // Загружаем сцену главного меню (убедись, что название совпадает с твоим)
+        SceneManager.LoadScene("StartGame"); 
+    }
+
+    public void UI_WatchCutsceneButton()
+    {
+        _victoryPanel.SetActive(false);
+        Debug.Log("Запуск финальной катсцены...");
+        int cutsceneSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
+        if (cutsceneSceneIndex < SceneManager.sceneCountInBuildSettings)
+        {
+            SceneManager.LoadScene(cutsceneSceneIndex);
+        }
+        else
+        {
+            Debug.LogError("Катсцена не найдена! Проверьте настройки сборки.");
+            SceneManager.LoadScene("MainMenuScene");
+        }
     }
 
     private IEnumerator AnimateVictoryStarsRoutine(int count)
