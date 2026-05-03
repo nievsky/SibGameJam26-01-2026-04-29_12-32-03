@@ -665,6 +665,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: CanvasStartMenu
       objectReference: {fileID: 0}
+    - target: {fileID: 5545476242758094556, guid: fcd421481132c8d4099d4787b221b4bb, type: 3}
+      propertyPath: m_Size.x
+      value: 5.83
+      objectReference: {fileID: 0}
+    - target: {fileID: 5545476242758094556, guid: fcd421481132c8d4099d4787b221b4bb, type: 3}
+      propertyPath: m_Size.y
+      value: 3.36
+      objectReference: {fileID: 0}
+    - target: {fileID: 5545476242758094556, guid: fcd421481132c8d4099d4787b221b4bb, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 1401044986, guid: e723b00e63f630142b1e4e11ab1735ca, type: 3}
+    - target: {fileID: 5545476242758094556, guid: fcd421481132c8d4099d4787b221b4bb, type: 3}
+      propertyPath: m_WasSpriteAssigned
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5915172249151970469, guid: fcd421481132c8d4099d4787b221b4bb, type: 3}
       propertyPath: m_fontAsset
       value: 

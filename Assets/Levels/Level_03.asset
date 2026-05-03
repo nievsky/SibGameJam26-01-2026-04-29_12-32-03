@@ -14,8 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelData
   Width: 6
   Height: 6
-  Star1ScoreThreshold: 50
-  Star2ScoreThreshold: 20
+  TargetScoreForStar: 50
   Rows:
   - Columns:
     - IsActive: 0
