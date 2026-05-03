@@ -9497,6 +9497,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1701802245}
   - component: {fileID: 1701802246}
+  - component: {fileID: 1701802247}
   m_Layer: 5
   m_Name: Sounds
   m_TagString: Untagged
@@ -9578,6 +9579,20 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1701802247
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1701802244}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 313ee30c12be5b240bc11108c8037b49, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FMODVolumeSlider
+  busPath: bus:/SFX
+  slider: {fileID: 1701802246}
 --- !u!4 &1720618371 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: b412d26a309817249bb5f4c7075f74bf, type: 3}
@@ -9730,6 +9745,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1798484850}
   - component: {fileID: 1798484851}
+  - component: {fileID: 1798484852}
   m_Layer: 5
   m_Name: Volume
   m_TagString: Untagged
@@ -9811,6 +9827,20 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &1798484852
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1798484849}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 313ee30c12be5b240bc11108c8037b49, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::FMODVolumeSlider
+  busPath: bus:/Music
+  slider: {fileID: 1798484851}
 --- !u!1 &1801385313
 GameObject:
   m_ObjectHideFlags: 0
