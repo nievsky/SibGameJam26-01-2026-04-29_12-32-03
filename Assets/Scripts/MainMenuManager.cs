@@ -1,58 +1,89 @@
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement; // Нужно для загрузки сцен
+using TMPro;
+using UnityEngine.UI;
+using UnityEngine.SceneManagement; 
 
 public class MainMenuManager : MonoBehaviour
 {
     [Header("Настройки Кампании")]
-    public List<LevelData> CampaignLevels; // Перетащи сюда те же уровни, что и в GameController
-    public string GameSceneName = "GameScene"; // Точное название твоей сцены с игрой
+    public List<LevelData> CampaignLevels; 
+    public string GameSceneName = "GameScene"; 
 
-    [Header("UI Элементы")]
-    public Transform GridParent; // Куда будут спавниться кнопки (объект с GridLayoutGroup)
-    public LevelSelectButtonUI ButtonPrefab; // Префаб кнопки уровня
+    [Header("UI Сетки Уровней")]
+    public Transform GridParent; 
+    public LevelSelectButtonUI ButtonPrefab; 
+
+    [Header("UI Прогресса и Ранга")]
+    public TextMeshProUGUI RankText; // Текст для звания (Шут, Дебютант и т.д.)
+    public TextMeshProUGUI TotalStarsText; // (Опционально) Текст для показа суммы звезд "Звезды: 15 / 39"
 
     private void Start()
     {
-        GenerateLevelGrid();
+        GenerateLevelGridAndCalculateRank();
     }
 
-    private void GenerateLevelGrid()
+    private void GenerateLevelGridAndCalculateRank()
     {
-        // 1. Очищаем сетку (на всякий случай, если там есть тестовые кнопки)
         foreach (Transform child in GridParent)
         {
             Destroy(child.gameObject);
         }
 
-        // 2. Проходимся по всем уровням кампании
+        int totalEarnedStars = 0;
+        int maxPossibleStars = CampaignLevels.Count * 3;
+
         for (int i = 0; i < CampaignLevels.Count; i++)
         {
             LevelData level = CampaignLevels[i];
             
-            // Читаем сколько звезд игрок сохранил для этого уровня
             string levelKey = $"LevelProgress_{level.name}";
             int earnedStars = PlayerPrefs.GetInt(levelKey, 0);
 
-            // Создаем кнопку
+            // Плюсуем звезды текущего уровня к общей сумме
+            totalEarnedStars += earnedStars;
+
             LevelSelectButtonUI newButton = Instantiate(ButtonPrefab, GridParent);
-            
-            // Чтобы внутри лямбда-выражения не сбился индекс, сохраняем его в локальную переменную
             int indexToLoad = i; 
-            
-            // Настраиваем кнопку: передаем номер, звезды и метод, который вызовется при клике
             newButton.Setup(indexToLoad, earnedStars, () => LoadGameSceneAtLevel(indexToLoad));
         }
+
+        // Обновляем UI ранга
+        UpdateRankUI(totalEarnedStars, maxPossibleStars);
+    }
+
+    private void UpdateRankUI(int totalStars, int maxStars)
+    {
+        // Устанавливаем звание
+        if (RankText != null)
+        {
+            RankText.text = GetRankName(totalStars);
+        }
+
+        // Опционально: показываем цифры (например, "12 / 39")
+        if (TotalStarsText != null)
+        {
+            TotalStarsText.text = $"{totalStars} / {maxStars}";
+        }
+    }
+
+    // Метод, который определяет звание по количеству звезд
+    private string GetRankName(int stars)
+    {
+        if (stars == 0) return "Шут";
+        if (stars >= 1 && stars <= 10) return "Жертва дебюта / Дебютант";
+        if (stars >= 11 && stars <= 20) return "Любитель рокировок";
+        if (stars >= 21 && stars <= 30) return "Гроссмейстер пешек";
+        if (stars >= 31 && stars <= 38) return "Король метаморфоз";
+        if (stars >= 39) return "Лавандовый Раф";
+        
+        return "Неизвестный ранг";
     }
 
     private void LoadGameSceneAtLevel(int levelIndex)
     {
         Debug.Log($"Загружаем уровень {levelIndex + 1}...");
-        
-        // Передаем индекс в статическую переменную GameController'а
         GameController.TargetStartLevelIndex = levelIndex;
-        
-        // Загружаем игровую сцену
         SceneManager.LoadScene(GameSceneName);
     }
 }
