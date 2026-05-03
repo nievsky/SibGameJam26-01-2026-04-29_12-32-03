@@ -1727,6 +1727,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: e72fa0723011b8f40a22b755a158e6f5, type: 2}
   - {fileID: 11400000, guid: 666471e20ab39d8449514e626711e42a, type: 2}
   - {fileID: 11400000, guid: 8c4d40129626a504192a758976d99166, type: 2}
+  - {fileID: 11400000, guid: f3c09b5635d51fa4ab8fb792e6e2f6cc, type: 2}
+  - {fileID: 11400000, guid: 66db55a3861ba7b4fa3b89e1b63c0504, type: 2}
+  - {fileID: 11400000, guid: 7d0caf74f9d799648a5b7700e1fd120c, type: 2}
+  - {fileID: 11400000, guid: ba49cd017ceaa5e4c9e2ca0c3488bed2, type: 2}
+  - {fileID: 11400000, guid: f2c1702685ec829418e531ae5b484ae1, type: 2}
   _playerKnight: {fileID: 8628423069537019948, guid: 596d7a311dfbaba49bc920d51b010804, type: 3}
   _playerQueen: {fileID: 4703460368975974312, guid: 7419d94bd8210fd4499179bf14909e95, type: 3}
   _playerBishop: {fileID: 167033622096982765, guid: 9a44c8b4112356f4da2a1c7877038f28, type: 3}
