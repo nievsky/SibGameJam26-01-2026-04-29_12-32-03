@@ -506,6 +506,7 @@ public class GameController : MonoBehaviour
         {
             if (isKingCaptured)
             {
+                AudioManager.PlayKingAngrySound();
                 AudioManager.PlayWinSound();
                 Debug.Log("КОРОЛЬ ПОВЕРЖЕН!");
                 ShowVictoryScreen();
@@ -560,8 +561,11 @@ public class GameController : MonoBehaviour
         {
             Vector3 deathPos = _cellViews[playerPos].transform.position;
             deathPos.y += 0.1f;
+
+            AudioManager.PlayKingLaughSound();
             AudioManager.PlayKillSound(deathPos);
             AudioManager.PlayPlaceSound(targetWorldPos);
+
             Destroy(playerPiece.gameObject);
             RestartLevel();
         });
