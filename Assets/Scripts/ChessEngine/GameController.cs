@@ -68,6 +68,14 @@ public class GameController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI _levelProgressText;
     [SerializeField] private GameObject[] _victoryStarObjects = new GameObject[3];
     
+    [Header("Настройки анимации")]
+    [SerializeField] private float _pieceHoverHeight = 0.3f; // Контролируй высоту здесь
+    [SerializeField] private float _animationDuration = 0.2f;
+    
+    [Header("Текстуры доски")]
+    [SerializeField] private Texture2D _lightCellTex;
+    [SerializeField] private Texture2D _darkCellTex;
+    
     public static int TargetStartLevelIndex = -1;
 
     private int _currentlyDisplayedStars = 0;
@@ -133,8 +141,8 @@ public class GameController : MonoBehaviour
                 CellView cellView = Instantiate(_cellPrefab, cellPos, Quaternion.identity, transform);
                 cellView.name = $"Cell {x}_{y}";
 
-                Color baseColor = (x + y) % 2 == 0 ? Color.white : Color.gray;
-                cellView.Init(new Vector2Int(x, y), baseColor, setup.IsActive);
+                Texture2D correctTex = (x + y) % 2 == 0 ? _lightCellTex : _darkCellTex;
+                cellView.Init(new Vector2Int(x, y), correctTex, setup.IsActive);
                 _cellViews.Add(new Vector2Int(x, y), cellView);
 
                 if (setup.IsActive && setup.Piece != PieceType.None && setup.Alignment != Alignment.None)
@@ -306,14 +314,19 @@ public class GameController : MonoBehaviour
         {
             setup.IsActive = false;
             logicCell.IsActive = false;
-            _cellViews[pos].SetActiveState(false, Color.black);
+            
+            // Выключаем клетку (передаем null, так как текстура для выключенной клетки не нужна)
+            _cellViews[pos].SetActiveState(false, null); 
         }
         else if (!setup.IsActive)
         {
             setup.IsActive = true;
             logicCell.IsActive = true;
-            Color baseColor = (pos.x + pos.y) % 2 == 0 ? Color.white : Color.gray;
-            _cellViews[pos].SetActiveState(true, baseColor);
+            
+            // Вычисляем правильную шахматную текстуру вместо цвета
+            Texture2D correctTex = (pos.x + pos.y) % 2 == 0 ? _lightCellTex : _darkCellTex;
+            
+            _cellViews[pos].SetActiveState(true, correctTex);
         }
 
         _engine.UpdateThreatMap();
@@ -436,10 +449,20 @@ public class GameController : MonoBehaviour
 
     private void SelectPiece(Vector2Int piecePos)
     {
+        if (_selectedPiece != null && _selectedPiece.LogicPosition == piecePos)
+        {
+            DeselectPiece();
+            return;
+        }
+
         DeselectPiece();
 
         _selectedPiece = _pieceViews[piecePos];
         _currentValidMoves = _engine.GetValidMoves(piecePos);
+
+        // Используем переменную _pieceHoverHeight для модульности
+        float targetY = _cellViews[piecePos].transform.position.y + 0.1f + _pieceHoverHeight;
+        _selectedPiece.transform.DOMoveY(targetY, _animationDuration).SetEase(Ease.OutQuad);
 
         foreach (Vector2Int movePos in _currentValidMoves)
         {
@@ -448,18 +471,29 @@ public class GameController : MonoBehaviour
             else
                 _cellViews[movePos].HighlightAsMove();
         }
-
+        
         AudioManager.PlayPickUpSound(_selectedPiece.transform.position);
     }
 
     private void DeselectPiece()
     {
-        _selectedPiece = null;
+        if (_selectedPiece == null) return;
+
+        // Возвращаем строго на базовую высоту (0.5f над клеткой)
+        if (_selectedPiece.gameObject != null)
+        {
+            float baseY = _cellViews[_selectedPiece.LogicPosition].transform.position.y + 0.1f;
+            _selectedPiece.transform.DOMoveY(baseY, _animationDuration).SetEase(Ease.InQuad);
+        }
+
         foreach (Vector2Int movePos in _currentValidMoves)
         {
-            _cellViews[movePos].ResetHighlight();
+            if (_cellViews.ContainsKey(movePos))
+                _cellViews[movePos].ResetHighlight();
         }
+    
         _currentValidMoves.Clear();
+        _selectedPiece = null;
     }
 
     private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)

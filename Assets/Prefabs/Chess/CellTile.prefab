@@ -157,8 +157,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1669f5b1a49b6014cba43da1c0029812, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CellView
-  _hoverColor: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  _moveColor: {r: 0, g: 1, b: 0, a: 1}
-  _attackColor: {r: 1, g: 0, b: 0, a: 1}
-  _inactiveColor: {r: 0, g: 0, b: 0, a: 1}
-  _threatColor: {r: 0.8, g: 0.3, b: 0.1, a: 1}
+  _normalTexture: {fileID: 2800000, guid: e373dc42686e8804ab6195934beab115, type: 3}
+  _inactiveTexture: {fileID: 2800000, guid: 77744f19389915f4d92c02b6759522ce, type: 3}
+  _moveTexture: {fileID: 2800000, guid: 0c48b29ebd3eb0f4fa10a2d2e86914ea, type: 3}
+  _attackTexture: {fileID: 2800000, guid: fe395a902590b8c408666d9f2f49225b, type: 3}
+  _threatTexture: {fileID: 2800000, guid: 8c70f7e8fa560d94da58c703c75cae10, type: 3}
+  _hoverTexture: {fileID: 2800000, guid: 76879a52965638f47bf5a88b8f940303, type: 3}
+  _shaderTextureName: _BaseMap

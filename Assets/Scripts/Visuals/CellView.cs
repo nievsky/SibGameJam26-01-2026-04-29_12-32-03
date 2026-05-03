@@ -7,19 +7,21 @@ public class CellView : MonoBehaviour
     
     private Renderer _renderer;
     private MaterialPropertyBlock _propBlock;
-    private Color _originalColor;
-
-    // Настройки цветов подсветки
-    [SerializeField] private Color _hoverColor = Color.yellow;
-    [SerializeField] private Color _moveColor = Color.green;
-    [SerializeField] private Color _attackColor = Color.red;
-    [SerializeField] private Color _inactiveColor = Color.black; // Цвет отключенной клетки
-    public bool IsActiveCell { get; private set; }
     
-    [SerializeField] private Color _threatColor = new Color(0.8f, 0.3f, 0.1f); // Темно-оранжевый/красный
+    [Header("Текстуры состояний")]
+    [SerializeField] private Texture2D _normalTexture;  // Назначается кодом (светлая/темная)
+    [SerializeField] private Texture2D _inactiveTexture; // <-- НОВАЯ ТЕКСТУРА ДЛЯ ОТКЛЮЧЕННЫХ КЛЕТОК (Черная)
+    [SerializeField] private Texture2D _moveTexture;
+    [SerializeField] private Texture2D _attackTexture;
+    [SerializeField] private Texture2D _threatTexture;
+    [SerializeField] private Texture2D _hoverTexture;
+
+    [SerializeField] private string _shaderTextureName = "_BaseMap"; // Для Standard шейдера поменяй на "_MainTex"
+
+    public bool IsActiveCell { get; private set; }
     public bool IsThreatened { get; set; } = false;
 
-    public void Init(Vector2Int logicPos, Color baseColor, bool isActive)
+    public void Init(Vector2Int logicPos, Texture2D baseTexture, bool isActive)
     {
         LogicPosition = logicPos;
         IsActiveCell = isActive;
@@ -27,34 +29,50 @@ public class CellView : MonoBehaviour
         _renderer = GetComponent<Renderer>();
         _propBlock = new MaterialPropertyBlock();
         
-        // Если клетка активна - шахматный цвет, если нет - цвет неактивной
-        _originalColor = isActive ? baseColor : _inactiveColor;
-        SetColor(_originalColor);
+        _normalTexture = baseTexture; 
+        
+        // БОЛЬШЕ НЕ ВЫКЛЮЧАЕМ GAMEOBJECT!
+        // Просто применяем правильную текстуру на старте
+        ResetHighlight();
     }
 
-    private void SetColor(Color color)
+    private void ApplyTexture(Texture2D tex)
     {
-        // Запрашиваем текущий блок, меняем цвет и применяем обратно
+        if (tex == null) return;
+        
         _renderer.GetPropertyBlock(_propBlock);
-        _propBlock.SetColor("_BaseColor", color); 
+        _propBlock.SetTexture(_shaderTextureName, tex); 
         _renderer.SetPropertyBlock(_propBlock);
     }
-    
-    // Добавим метод для быстрого переключения состояния из редактора
-    public void SetActiveState(bool isActive, Color baseColor)
+
+    // Обновленный метод для редактора
+    public void SetActiveState(bool isActive, Texture2D baseTexture)
     {
         IsActiveCell = isActive;
-        _originalColor = isActive ? baseColor : _inactiveColor;
-        ResetHighlight(); // Применяем цвет
+        
+        // Если передали шахматную текстуру (при включении) - запоминаем её
+        if (baseTexture != null)
+        {
+            _normalTexture = baseTexture;
+        }
+        
+        ResetHighlight(); 
     }
 
-    // Методы для контроллера
-    public void HighlightAsMove() => SetColor(_moveColor);
-    public void HighlightAsAttack() => SetColor(_attackColor);
-    public void HighlightAsHover() => SetColor(_hoverColor);
+    public void HighlightAsMove() => ApplyTexture(_moveTexture);
+    public void HighlightAsAttack() => ApplyTexture(_attackTexture);
+    public void HighlightAsHover() => ApplyTexture(_hoverTexture);
+    
     public void ResetHighlight()
     {
-        // Если клетка под ударом, базовым цветом становится цвет угрозы
-        SetColor(IsThreatened ? _threatColor : _originalColor);
+        if (IsThreatened)
+        {
+            ApplyTexture(_threatTexture);
+        }
+        else
+        {
+            // Если клетка активна - рисуем шахматный пол, если нет - черную текстуру
+            ApplyTexture(IsActiveCell ? _normalTexture : _inactiveTexture);
+        }
     }
 }

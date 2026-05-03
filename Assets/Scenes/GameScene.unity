@@ -2897,6 +2897,10 @@ MonoBehaviour:
   - {fileID: 202276826}
   - {fileID: 263547452}
   - {fileID: 1439947035}
+  _pieceHoverHeight: 0.2
+  _animationDuration: 0.2
+  _lightCellTex: {fileID: 2800000, guid: 4997d1ade1281e54b81782bb52f85e19, type: 3}
+  _darkCellTex: {fileID: 2800000, guid: 3444df2b9b451c94591fd1d59a0ffb71, type: 3}
 --- !u!4 &595047572
 Transform:
   m_ObjectHideFlags: 0
