@@ -254,6 +254,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 1475
+--- !u!114 &-315390082131304239
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/king angry
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/king angry
+  Guid:
+    Data1: -886602978
+    Data2: 1324455771
+    Data3: -491276886
+    Data4: -1531248290
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 1789
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -280,13 +307,15 @@ MonoBehaviour:
   - {fileID: 5179583411664847863}
   - {fileID: -3174012791554443781}
   - {fileID: -1633890350207690689}
+  - {fileID: -315390082131304239}
+  - {fileID: 3499896001485941635}
   EditorParameters: []
   MasterBanks:
   - {fileID: 3051408238469172288}
   StringsBanks:
   - {fileID: 4960787711833821098}
   cacheVersion: 131848
-  cacheTime: 639134138564165952
+  cacheTime: 639134210377442369
   SerializableEventsDict:
   - key: event:/chess place
     index: 0
@@ -308,6 +337,10 @@ MonoBehaviour:
     index: 8
   - key: event:/chess change
     index: 9
+  - key: event:/king angry
+    index: 10
+  - key: event:/king laugh
+    index: 11
 --- !u!114 &122095596870691761
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -485,9 +518,36 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639134138564155871
+  lastModified: 639134210377422355
   FileSizes: []
   Exists: 1
+--- !u!114 &3499896001485941635
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/king laugh
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/king laugh
+  Guid:
+    Data1: -1398544450
+    Data2: 1161163515
+    Data3: -509961066
+    Data4: 590921799
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 2130
 --- !u!114 &4763241204133092360
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -557,10 +617,10 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639134138564165952
+  lastModified: 639134210377442369
   FileSizes:
   - Name: 
-    Value: 1226
+    Value: 1314
   Exists: 1
 --- !u!114 &5117024513840096463
 MonoBehaviour:

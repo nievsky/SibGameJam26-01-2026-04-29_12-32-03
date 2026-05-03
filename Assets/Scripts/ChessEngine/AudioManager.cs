@@ -35,6 +35,31 @@ public static class AudioManager
         RuntimeManager.PlayOneShot("event:/chess change", position);
     }
 
+
+    public static void PlayKingAngrySound()
+    {
+        Debug.Log("Звук: Король злится (победа)");
+        RuntimeManager.PlayOneShot("event:/king angry");
+    }
+
+    public static void PlayKingAngrySound(Vector3 position)
+    {
+        Debug.Log($"Звук: Король злится в {position}");
+        RuntimeManager.PlayOneShot("event:/king angry", position);
+    }
+
+    public static void PlayKingLaughSound()
+    {
+        Debug.Log("Звук: Король смеётся (поражение)");
+        RuntimeManager.PlayOneShot("event:/king laugh");
+    }
+
+    public static void PlayKingLaughSound(Vector3 position)
+    {
+        Debug.Log($"Звук: Король смеётся в {position}");
+        RuntimeManager.PlayOneShot("event:/king laugh", position);
+    }
+
     public static void PlayEnemyAttackSound(Vector3 position)
     {
         Debug.Log($"Звук: Атака врага в {position}");
