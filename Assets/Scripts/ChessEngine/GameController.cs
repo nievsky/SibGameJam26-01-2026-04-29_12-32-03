@@ -60,6 +60,9 @@ public class GameController : MonoBehaviour
     [Header("UI Инвентаря")]
     [SerializeField] private List<InventorySlotUI> _inventorySlots;
     
+    [Header("Визуальные эффекты")]
+    [SerializeField] private GameObject _morphParticlePrefab;
+    
     private int _currentlyDisplayedStars = 0;
 
     private int _currentScore = 0;
@@ -600,9 +603,10 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
 
     private void SwapPlayerPiece(PieceType newType)
     {
+        // 1. Ищем, где сейчас стоит игрок
         Vector2Int playerPos = Vector2Int.zero;
         bool foundPlayer = false;
-
+        
         foreach (var kvp in _pieceViews)
         {
             if (kvp.Value.Alignment == Alignment.Player)
@@ -615,46 +619,59 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
 
         if (!foundPlayer) return;
 
+        // 2. ПРОВЕРЯЕМ ПРЕФАБ
         PieceView newPrefab = GetPrefab(newType, Alignment.Player);
-        if (newPrefab == null)
+        if (newPrefab == null) 
         {
             Debug.LogError($"МОРФ ОТМЕНЕН: Префаб для {newType} не найден!");
-            return;
+            return; 
         }
 
+        // 3. Обновляем логический движок
         _engine.GetCell(playerPos).CurrentPiece = newType;
 
+        // Получаем мировые координаты клетки для эффекта и новой фигуры
+        Vector3 worldPos = _cellViews[playerPos].transform.position;
+        worldPos.y += 0.1f;
+
+        // --- ДОБАВЛЯЕМ СПАВН ПАРТИКЛОВ ЗДЕСЬ ---
+        if (_morphParticlePrefab != null)
+        {
+            // Создаем эффект чуть выше клетки
+            Vector3 particlePos = worldPos;
+            particlePos.y += 0.1f; // Приподнимаем эффект, чтобы он был по центру фигуры
+            
+            GameObject effect = Instantiate(_morphParticlePrefab, particlePos, Quaternion.identity);
+            
+            // Автоматически уничтожаем объект эффекта через 2 секунды
+            // (Убедись, что время больше, чем длительность самого эффекта)
+            Destroy(effect, 2f); 
+        }
+        // ----------------------------------------
+
+        // 4. Удаляем старую 3D-модель
         PieceView oldView = _pieceViews[playerPos];
         Destroy(oldView.gameObject);
         _pieceViews.Remove(playerPos);
 
-        Vector3 transformPos = _cellViews[playerPos].transform.position;
-        transformPos.y += 0.1f;
-        AudioManager.PlayTransformationSound(transformPos);
-
-        Vector3 worldPos = _cellViews[playerPos].transform.position;
-        worldPos.y += 0.1f;
-
+        // 5. Спавним новую 3D-модель
         PieceView newView = Instantiate(newPrefab, worldPos, Quaternion.identity);
         newView.LogicPosition = playerPos;
         newView.Type = newType;
         newView.Alignment = Alignment.Player;
         _pieceViews.Add(playerPos, newView);
 
+        // 6. Перерисовываем подсветку ходов
         if (_selectedPiece != null && _selectedPiece.LogicPosition == playerPos)
         {
             SelectPiece(playerPos);
         }
 
-        _engine.UpdateThreatMap();
-        RefreshBoardThreats();
-
+        UpdateCameraFocus(playerPos);
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
 
         Debug.Log($"МОРФ: Фигура игрока изменена на {newType}");
-        
-        UpdateCameraFocus(playerPos);
     }
 
     private void ClearBoard()
