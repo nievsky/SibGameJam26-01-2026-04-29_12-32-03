@@ -25,8 +25,14 @@ public static class AudioManager
 
     public static void PlayCaptureSound(Vector3 position)
     {
-        Debug.Log($"Звук: Рубка в {position}");
+        Debug.Log($"Звук: Рубка врага в {position}");
         RuntimeManager.PlayOneShot("event:/chess kill", position);
+    }
+
+    public static void PlayChangeSound(Vector3 position)
+    {
+        Debug.Log($"Звук: Смена фигуры в {position}");
+        RuntimeManager.PlayOneShot("event:/chess change", position);
     }
 
     public static void PlayEnemyAttackSound(Vector3 position)
@@ -41,15 +47,46 @@ public static class AudioManager
         RuntimeManager.PlayOneShot("event:/chess kill", position);
     }
 
-    public static void PlayTransformationSound(Vector3 position)
-    {
-        Debug.Log($"Звук: Превращение в {position}");
-        RuntimeManager.PlayOneShot("event:/chess place", position);
-    }
-
     public static void PlayRestartSound(Vector3 position)
     {
         Debug.Log($"Звук: Рестарт в {position}");
+    }
+
+    public static void PlayWinSound()
+    {
+        PlayWinSound(Vector3.zero);
+    }
+
+    public static void PlayWinSound(Vector3 position)
+    {
+        Debug.Log($"Звук: Победа на уровне в {position}");
+        RuntimeManager.PlayOneShot("event:/win", position);
+    }
+
+    // --- UI ЗВУКИ ---
+
+    public static void PlayUIClickSound()
+    {
+        Debug.Log("Звук: UI Click");
+        RuntimeManager.PlayOneShot("event:/ui click");
+    }
+
+    public static void PlayUIHoverSound()
+    {
+        Debug.Log("Звук: UI Hover");
+        RuntimeManager.PlayOneShot("event:/ui hover");
+    }
+
+    public static void PlayUIClickSound(Vector3 position)
+    {
+        Debug.Log($"Звук: UI Click в {position}");
+        RuntimeManager.PlayOneShot("event:/ui click", position);
+    }
+
+    public static void PlayUIHoverSound(Vector3 position)
+    {
+        Debug.Log($"Звук: UI Hover в {position}");
+        RuntimeManager.PlayOneShot("event:/ui hover", position);
     }
 
     // --- МУЗЫКА ---
@@ -161,8 +198,8 @@ public static class AudioManager
     public static void PlayPickUpSound() => PlayPickUpSound(Vector3.zero);
     public static void PlayPlaceSound() => PlayPlaceSound(Vector3.zero);
     public static void PlayCaptureSound() => PlayCaptureSound(Vector3.zero);
+    public static void PlayChangeSound() => PlayChangeSound(Vector3.zero);
     public static void PlayEnemyAttackSound() => PlayEnemyAttackSound(Vector3.zero);
     public static void PlayKillSound() => PlayKillSound(Vector3.zero);
-    public static void PlayTransformationSound() => PlayTransformationSound(Vector3.zero);
     public static void PlayRestartSound() => PlayRestartSound(Vector3.zero);
 }

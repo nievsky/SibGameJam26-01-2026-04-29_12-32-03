@@ -14,9 +14,9 @@ public class GameController : MonoBehaviour
     [SerializeField] private CellView _cellPrefab;
     [SerializeField] private float _cellSize = 1.1f;
     [SerializeField] private LayerMask _cellLayer;
-    
+
     [Header("Настройки мыши")]
-    [SerializeField] private LayerMask _boardLayerMask; // Слой, по которому можно кликать
+    [SerializeField] private LayerMask _boardLayerMask;
 
     [Header("Кампания")]
     [SerializeField] private LevelData _currentLevel;
@@ -53,22 +53,21 @@ public class GameController : MonoBehaviour
     public int PointsPerCapture = 10;
 
     [Header("UI Звезды (DOTween)")]
-    // Перетащи сюда 3 ЗАПОЛНЕННЫЕ звезды (дети пустых контуров) по порядку слева направо
-    [SerializeField] private GameObject[] _filledStarObjects = new GameObject[3]; 
+    [SerializeField] private GameObject[] _filledStarObjects = new GameObject[3];
     [SerializeField] private float _starAnimDuration = 0.4f;
     [SerializeField] private float _starAnimDelay = 0.2f;
-    
+
     [Header("UI Инвентаря")]
     [SerializeField] private List<InventorySlotUI> _inventorySlots;
-    
+
     [Header("Визуальные эффекты")]
     [SerializeField] private GameObject _morphParticlePrefab;
-    
+
     [Header("UI Экран Победы")]
-    [SerializeField] private GameObject _victoryPanel; // Сама панель
-    [SerializeField] private TextMeshProUGUI _levelProgressText;  // Текст "Уровень 1 из 10" (если используешь TextMeshPro, замени Text на TextMeshProUGUI)
-    [SerializeField] private GameObject[] _victoryStarObjects = new GameObject[3]; // Звезды на победном экране
-    
+    [SerializeField] private GameObject _victoryPanel;
+    [SerializeField] private TextMeshProUGUI _levelProgressText;
+    [SerializeField] private GameObject[] _victoryStarObjects = new GameObject[3];
+
     private int _currentlyDisplayedStars = 0;
 
     private int _currentScore = 0;
@@ -100,7 +99,6 @@ public class GameController : MonoBehaviour
 
         AudioManager.PlayLevelMusic();
         AudioManager.PlayAmbience();
-
     }
 
     private void LoadLevel(LevelData levelData)
@@ -112,7 +110,7 @@ public class GameController : MonoBehaviour
         _currentScore = 0;
         _isHintActive = false;
         _hintsUsedThisLevel = false;
-        
+
 
         for (int y = 0; y < levelData.Height; y++)
         {
@@ -121,14 +119,13 @@ public class GameController : MonoBehaviour
                 CellSetup setup = levelData.Rows[y].Columns[x];
                 _engine.GetCell(x, y).IsActive = setup.IsActive;
 
-                // --- ИСПОЛЬЗУЕМ НОВЫЙ МЕТОД ДЛЯ ПОЗИЦИИ ---
                 Vector3 cellPos = GetCenteredWorldPosition(x, y, levelData.Width, levelData.Height);
-            
+
                 CellView cellView = Instantiate(_cellPrefab, cellPos, Quaternion.identity, transform);
                 cellView.name = $"Cell {x}_{y}";
-            
+
                 Color baseColor = (x + y) % 2 == 0 ? Color.white : Color.gray;
-                cellView.Init(new Vector2Int(x, y), baseColor, setup.IsActive); 
+                cellView.Init(new Vector2Int(x, y), baseColor, setup.IsActive);
                 _cellViews.Add(new Vector2Int(x, y), cellView);
 
                 if (setup.IsActive && setup.Piece != PieceType.None && setup.Alignment != Alignment.None)
@@ -141,22 +138,21 @@ public class GameController : MonoBehaviour
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
 
-        _inventoryAtLevelStart = new List<PieceType>(PlayerInventory); 
-        
+        _inventoryAtLevelStart = new List<PieceType>(PlayerInventory);
+
         if (_cameraController != null)
         {
-            // Передаем transform.position как фактический центр доски
             _cameraController.SetupBoard(levelData.Width, levelData.Height, _cellSize, transform.position);
         }
-        
+
         _currentlyDisplayedStars = 0;
         foreach (var star in _filledStarObjects)
         {
             star.SetActive(false);
-            star.transform.localScale = Vector3.one; // Сброс скейла после DOTween
+            star.transform.localScale = Vector3.one;
         }
-        
-        UpdateStarsUI(); 
+
+        UpdateStarsUI();
         FocusCameraOnPlayerInstant();
         UpdateInventoryUI();
     }
@@ -172,7 +168,7 @@ public class GameController : MonoBehaviour
             PlayerInventory.Add(setup.Piece);
             Debug.Log($"Стартовая фигура добавлена в инвентарь: {setup.Piece}");
         }
-        
+
 
         PieceView prefabToSpawn = GetPrefab(setup.Piece, setup.Alignment);
         if (prefabToSpawn == null) return;
@@ -457,19 +453,20 @@ public class GameController : MonoBehaviour
         _currentValidMoves.Clear();
     }
 
-private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
+    private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
     {
         DeselectPiece();
         _isAnimating = true;
 
-        bool isKingCaptured = false; // Флаг победы
+        bool isKingCaptured = false;
+        bool isCapture = false;
 
-        // --- ЛОГИКА РУБКИ ВРАГА ИГРОКОМ ---
         if (_pieceViews.TryGetValue(toPos, out PieceView enemyPiece))
         {
             if (enemyPiece.Alignment == Alignment.Enemy)
             {
-                // Если мы рубим Короля - запоминаем это!
+                isCapture = true;
+
                 if (enemyPiece.Type == PieceType.King)
                 {
                     isKingCaptured = true;
@@ -491,36 +488,31 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
             }
         }
 
-        // 1. Двигаем в логике движка
         _engine.MovePiece(fromPos, toPos);
         _engine.UpdateThreatMap();
         RefreshBoardThreats();
 
-        // 2. Обновляем словари визуала
         PieceView movingPiece = _pieceViews[fromPos];
         _pieceViews.Remove(fromPos);
         _pieceViews[toPos] = movingPiece;
         movingPiece.LogicPosition = toPos;
 
-        // 3. Обновляем камеру
         UpdateCameraFocus(toPos);
 
-        // 4. Анимируем визуал
         Vector3 targetWorldPos = _cellViews[toPos].transform.position;
         targetWorldPos.y += 0.1f;
 
         movingPiece.MoveToWorldPosition(targetWorldPos, () =>
         {
-            // --- ПРОВЕРКА ПОБЕДЫ ---
             if (isKingCaptured)
             {
+                AudioManager.PlayWinSound();
                 Debug.Log("КОРОЛЬ ПОВЕРЖЕН!");
-                // ЗАМЕНИЛИ LoadNextLevel() НА ЭТО:
-                ShowVictoryScreen(); 
+                ShowVictoryScreen();
                 return;
             }
 
-            if (isKingCaptured)
+            if (isCapture)
             {
                 AudioManager.PlayCaptureSound(targetWorldPos);
             }
@@ -531,7 +523,6 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
 
             BoardCell currentCell = _engine.GetCell(toPos);
 
-            // --- ЛОГИКА СМЕРТИ ИГРОКА (если это не победный ход) ---
             if (currentCell.IsUnderEnemyAttack)
             {
                 Vector2Int attackerPos = currentCell.AttackedBy[0];
@@ -539,7 +530,7 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
             }
             else
             {
-                _isAnimating = false; // Возвращаем инпут, если всё безопасно
+                _isAnimating = false;
             }
         });
     }
@@ -610,10 +601,9 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
 
     private void SwapPlayerPiece(PieceType newType)
     {
-        // 1. Ищем, где сейчас стоит игрок
         Vector2Int playerPos = Vector2Int.zero;
         bool foundPlayer = false;
-        
+
         foreach (var kvp in _pieceViews)
         {
             if (kvp.Value.Alignment == Alignment.Player)
@@ -626,49 +616,41 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
 
         if (!foundPlayer) return;
 
-        // 2. ПРОВЕРЯЕМ ПРЕФАБ
         PieceView newPrefab = GetPrefab(newType, Alignment.Player);
-        if (newPrefab == null) 
+        if (newPrefab == null)
         {
             Debug.LogError($"МОРФ ОТМЕНЕН: Префаб для {newType} не найден!");
-            return; 
+            return;
         }
 
-        // 3. Обновляем логический движок
         _engine.GetCell(playerPos).CurrentPiece = newType;
 
-        // Получаем мировые координаты клетки для эффекта и новой фигуры
         Vector3 worldPos = _cellViews[playerPos].transform.position;
         worldPos.y += 0.1f;
 
-        // --- ДОБАВЛЯЕМ СПАВН ПАРТИКЛОВ ЗДЕСЬ ---
         if (_morphParticlePrefab != null)
         {
-            // Создаем эффект чуть выше клетки
             Vector3 particlePos = worldPos;
-            particlePos.y += 0.1f; // Приподнимаем эффект, чтобы он был по центру фигуры
-            
-            GameObject effect = Instantiate(_morphParticlePrefab, particlePos, Quaternion.identity);
-            
-            // Автоматически уничтожаем объект эффекта через 2 секунды
-            // (Убедись, что время больше, чем длительность самого эффекта)
-            Destroy(effect, 2f); 
-        }
-        // ----------------------------------------
+            particlePos.y += 0.1f;
 
-        // 4. Удаляем старую 3D-модель
+            GameObject effect = Instantiate(_morphParticlePrefab, particlePos, Quaternion.identity);
+            Destroy(effect, 2f);
+        }
+
+        Vector3 transformPos = _cellViews[playerPos].transform.position;
+        transformPos.y += 0.1f;
+        AudioManager.PlayChangeSound(transformPos);
+
         PieceView oldView = _pieceViews[playerPos];
         Destroy(oldView.gameObject);
         _pieceViews.Remove(playerPos);
 
-        // 5. Спавним новую 3D-модель
         PieceView newView = Instantiate(newPrefab, worldPos, Quaternion.identity);
         newView.LogicPosition = playerPos;
         newView.Type = newType;
         newView.Alignment = Alignment.Player;
         _pieceViews.Add(playerPos, newView);
 
-        // 6. Перерисовываем подсветку ходов
         if (_selectedPiece != null && _selectedPiece.LogicPosition == playerPos)
         {
             SelectPiece(playerPos);
@@ -709,7 +691,7 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
         PlayerInventory = new List<PieceType>(_inventoryAtLevelStart);
 
         UpdateInventoryUI();
-        
+
         ClearBoard();
         LoadLevel(_currentLevel);
 
@@ -801,18 +783,14 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
         Debug.Log($"ПОЛУЧЕНО ЗВЕЗД: {finalStars} / 3");
         Debug.Log("=============================");
 
-        // --- ВРЕМЕННОЕ СОХРАНЕНИЕ ПРОГРЕССА ---
-        // Создаем уникальный ключ для уровня (например "LevelProgress_Level_01")
         string levelKey = $"LevelProgress_{_currentLevel.name}";
-        
-        // Читаем старый рекорд (если его нет, вернет 0)
+
         int previousStars = PlayerPrefs.GetInt(levelKey, 0);
 
-        // Сохраняем, только если игрок побил свой рекорд
         if (finalStars > previousStars)
         {
             PlayerPrefs.SetInt(levelKey, finalStars);
-            PlayerPrefs.Save(); // Записываем на диск
+            PlayerPrefs.Save();
             Debug.Log($"Новый рекорд сохранен! Уровень: {_currentLevel.name}, Звезды: {finalStars}");
         }
     }
@@ -821,13 +799,11 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
     {
         int targetStars = CalculateEarnedStars();
 
-        // Если заработали НОВЫЕ звезды - анимируем их появление
         if (targetStars > _currentlyDisplayedStars)
         {
             StartCoroutine(AnimateStarsRoutine(_currentlyDisplayedStars, targetStars));
             _currentlyDisplayedStars = targetStars;
         }
-        // Если ПОТЕРЯЛИ звезду (нажали подсказку) - просто гасим последнюю горящую
         else if (targetStars < _currentlyDisplayedStars)
         {
             for (int i = targetStars; i < _currentlyDisplayedStars; i++)
@@ -837,87 +813,70 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
             _currentlyDisplayedStars = targetStars;
         }
     }
-    
+
     private void FocusCameraOnPlayerInstant()
     {
-        // Ищем на доске фигуру игрока
         foreach (var kvp in _pieceViews)
         {
             if (kvp.Value.Alignment == Alignment.Player)
             {
-                UpdateCameraFocus(kvp.Key); // Передаем координаты
-                
-                // Мгновенно телепортируем камеру туда
-                if (_cameraController != null) 
+                UpdateCameraFocus(kvp.Key);
+
+                if (_cameraController != null)
                     _cameraController.SnapToTarget();
-                
+
                 break;
             }
         }
     }
-    
+
     private Vector3 GetCenteredWorldPosition(int x, int y, int width, int height)
     {
-        // Вычисляем, насколько нужно сдвинуть сетку, чтобы ее центр оказался в (0,0)
         float offsetX = (width - 1) * _cellSize / 2f;
         float offsetZ = (height - 1) * _cellSize / 2f;
 
-        // Вычисляем локальную позицию и прибавляем позицию самого GameManager (transform.position)
         Vector3 localPosition = new Vector3(x * _cellSize - offsetX, 0, y * _cellSize - offsetZ);
         return transform.position + localPosition;
     }
-    
-    // Метод высчитывает, сколько всего звезд игрок заслужил прямо сейчас
+
     private int CalculateEarnedStars()
     {
         int stars = 0;
-        
-        // 1. Звезда за игру без подсказок (горит со старта, гаснет если нажать H)
+
         if (!_hintsUsedThisLevel) stars++;
-        
-        // 2. Звезда за рубку врагов (загорается, когда набрали нужное количество)
+
         if (_currentScore >= _currentLevel.TargetScoreForStar) stars++;
 
-        // Третью звезду (за Короля) мы здесь не считаем, так как во время игры Король еще жив.
-        
         return Mathf.Clamp(stars, 0, 3);
     }
-    
+
     private IEnumerator AnimateStarsRoutine(int startIdx, int endIdx)
     {
         for (int i = startIdx; i < endIdx; i++)
         {
             GameObject star = _filledStarObjects[i];
             star.SetActive(true);
-            
-            // Начинаем с нулевого размера
+
             star.transform.localScale = Vector3.zero;
 
-            // TODO (FMOD): Здесь саунд-дизайнер добавит звук появления звезды.
-            // Можно использовать параметр (i), чтобы менять Pitch звука (делать его выше с каждой звездой)
-            // FMODUnity.RuntimeManager.PlayOneShot("event:/UI/Star_Pop");
-
-            // Анимация Bounce (выскакивает чуть больше нужного и возвращается в 1)
             star.transform.DOScale(Vector3.one, _starAnimDuration).SetEase(Ease.OutBack);
 
-            // Ждем перед появлением следующей
             yield return new WaitForSeconds(_starAnimDelay);
         }
     }
-    
+
     private void UpdateInventoryUI()
     {
         foreach (var slot in _inventorySlots)
         {
-            // Карточка разблокирована, если тип фигуры есть в списке инвентаря игрока
             bool hasPiece = PlayerInventory.Contains(slot.Type);
             slot.SetUnlocked(hasPiece);
         }
     }
-    
+
     private void ShowVictoryScreen()
     {
-        _isAnimating = true; 
+        _isAnimating = true;
         _victoryPanel.SetActive(true);
 
         if (_levelProgressText != null && CampaignLevels != null)
@@ -925,10 +884,8 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
             _levelProgressText.text = $"УРОВЕНЬ {_currentLevelIndex + 1}/{CampaignLevels.Count}";
         }
 
-        // --- НОВАЯ СИСТЕМА: Берем текущие звезды + 1 за победу ---
-        int finalStars = CalculateEarnedStars() + 1; 
+        int finalStars = CalculateEarnedStars() + 1;
 
-        // Сохраняем рекорд
         string levelKey = $"LevelProgress_{_currentLevel.name}";
         int previousStars = PlayerPrefs.GetInt(levelKey, 0);
         if (finalStars > previousStars)
@@ -948,21 +905,18 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
 
     private IEnumerator AnimateVictoryStarsRoutine(int count)
     {
-        // Небольшая пауза перед тем как звезды начнут появляться
-        yield return new WaitForSeconds(0.3f); 
+        yield return new WaitForSeconds(0.3f);
 
         for (int i = 0; i < count; i++)
         {
             GameObject star = _victoryStarObjects[i];
             star.SetActive(true);
-            
-            // FMODUnity.RuntimeManager.PlayOneShot("event:/UI/Victory_Star");
-            
+
             star.transform.DOScale(Vector3.one, 0.5f).SetEase(Ease.OutBack);
             yield return new WaitForSeconds(0.3f);
         }
     }
-    
+
     public void UI_NextLevelButton()
     {
         _victoryPanel.SetActive(false);
