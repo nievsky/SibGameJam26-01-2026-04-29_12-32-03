@@ -1,5 +1,5 @@
 using UnityEngine;
-using UnityEngine.EventSystems; // Needed for pointer events
+using UnityEngine.EventSystems;
 using DG.Tweening;
 
 public class UIButtonTween : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
@@ -8,46 +8,41 @@ public class UIButtonTween : MonoBehaviour, IPointerEnterHandler, IPointerExitHa
     private Vector3 originalScale;
 
     [Header("Animation Settings")]
-    public float hoverScale = 1.1f;   // How big the button grows on hover
-    public float animationDuration = 0.2f; // Duration of the tween
+    public float hoverScale = 1.1f;
+    public float animationDuration = 0.2f;
 
     private void Awake()
     {
         rectTransform = GetComponent<RectTransform>();
         originalScale = rectTransform.localScale;
     }
-    
+
     private void Start()
     {
-        // Idle pulsing effect
         rectTransform.DOScale(originalScale * 1.02f, 1f)
             .SetEase(Ease.InOutSine)
-            .SetLoops(-1, LoopType.Yoyo); // loops forever
+            .SetLoops(-1, LoopType.Yoyo);
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        // Kill any existing tweens to avoid conflicts
         rectTransform.DOKill();
 
-        // Scale up then scale back (like a bounce)
         rectTransform.DOScale(originalScale * hoverScale, animationDuration)
             .SetEase(Ease.OutBack);
 
-        // UIAudioManager.Instance.PlayHoverSFX();
+        AudioManager.PlayUIHoverSound();
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        // UIAudioManager.Instance.PlayClickSFX();
+        AudioManager.PlayUIClickSound();
     }
-    
+
     public void OnPointerExit(PointerEventData eventData)
     {
-        // Kill any existing tweens
         rectTransform.DOKill();
 
-        // Scale back to original
         rectTransform.DOScale(originalScale, animationDuration)
             .SetEase(Ease.OutBack);
     }
