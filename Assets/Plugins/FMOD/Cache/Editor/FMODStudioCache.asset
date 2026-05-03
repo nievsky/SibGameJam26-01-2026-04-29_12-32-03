@@ -92,6 +92,33 @@ MonoBehaviour:
   - Name: 
     Value: 854
   Exists: 1
+--- !u!114 &-3174012791554443781
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/ui click
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/ui click
+  Guid:
+    Data1: 2083714769
+    Data2: 1100723529
+    Data3: 2083380409
+    Data4: -805959475
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 0
 --- !u!114 &-2469447557912099501
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -146,6 +173,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 70000
+--- !u!114 &-1633890350207690689
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/chess change
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/chess change
+  Guid:
+    Data1: 2018186962
+    Data2: 1213547935
+    Data3: 581432234
+    Data4: 1876394058
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 719
 --- !u!114 &-1080536438816778062
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -223,16 +277,16 @@ MonoBehaviour:
   - {fileID: 2332071148021845267}
   - {fileID: 7931089171253944435}
   - {fileID: -2469447557912099501}
-  - {fileID: -1080536438816778062}
-  - {fileID: 469658020806471918}
-  - {fileID: 2479859460222332410}
+  - {fileID: 5179583411664847863}
+  - {fileID: -3174012791554443781}
+  - {fileID: -1633890350207690689}
   EditorParameters: []
   MasterBanks:
   - {fileID: 3051408238469172288}
   StringsBanks:
   - {fileID: 4960787711833821098}
   cacheVersion: 131848
-  cacheTime: 639134162883988223
+  cacheTime: 639134138564165952
   SerializableEventsDict:
   - key: event:/chess place
     index: 0
@@ -431,7 +485,7 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639134162883968197
+  lastModified: 639134138564155871
   FileSizes: []
   Exists: 1
 --- !u!114 &4763241204133092360
@@ -503,7 +557,7 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639134162883988223
+  lastModified: 639134138564165952
   FileSizes:
   - Name: 
     Value: 1226
@@ -535,6 +589,33 @@ MonoBehaviour:
   MinDistance: 1
   MaxDistance: 20
   Length: 74160
+--- !u!114 &5179583411664847863
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ceb653cd98e289a4e8697a1af55201f2, type: 3}
+  m_Name: event:/ui hover
+  m_EditorClassIdentifier: FMODUnityEditor::FMODUnity.EditorEventRef
+  Path: event:/ui hover
+  Guid:
+    Data1: 1045304848
+    Data2: 1157448115
+    Data3: -1580660562
+    Data4: 2056678553
+  Banks:
+  - {fileID: 3051408238469172288}
+  IsStream: 0
+  Is3D: 0
+  IsOneShot: 1
+  Parameters: []
+  MinDistance: 1
+  MaxDistance: 20
+  Length: 0
 --- !u!114 &7931089171253944435
 MonoBehaviour:
   m_ObjectHideFlags: 0
