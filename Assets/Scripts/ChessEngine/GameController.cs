@@ -68,21 +68,21 @@ public class GameController : MonoBehaviour
     [SerializeField] private GameObject _victoryPanel;
     [SerializeField] private TextMeshProUGUI _levelProgressText;
     [SerializeField] private GameObject[] _victoryStarObjects = new GameObject[3];
-    
+
     [Header("Кнопки Победного Экрана")]
-    [SerializeField] private GameObject _nextLevelButton; // Обычная кнопка "Далее"
-    [SerializeField] private GameObject _restartButton;   // Обычная кнопка "Рестарт"
-    [SerializeField] private GameObject _cutsceneButton;  // Финальная кнопка "Катсцена"
-    [SerializeField] private GameObject _mainMenuButton;  // Финальная кнопка "В меню"
-    
+    [SerializeField] private GameObject _nextLevelButton;
+    [SerializeField] private GameObject _restartButton;
+    [SerializeField] private GameObject _cutsceneButton;
+    [SerializeField] private GameObject _mainMenuButton;
+
     [Header("Настройки анимации")]
-    [SerializeField] private float _pieceHoverHeight = 0.3f; // Контролируй высоту здесь
+    [SerializeField] private float _pieceHoverHeight = 0.3f;
     [SerializeField] private float _animationDuration = 0.2f;
-    
+
     [Header("Текстуры доски")]
     [SerializeField] private Texture2D _lightCellTex;
     [SerializeField] private Texture2D _darkCellTex;
-    
+
     public static int TargetStartLevelIndex = -1;
 
     private int _currentlyDisplayedStars = 0;
@@ -110,7 +110,6 @@ public class GameController : MonoBehaviour
             _currentLevelIndex = TargetStartLevelIndex;
             LoadLevel(CampaignLevels[_currentLevelIndex]);
         }
-        // 2. Обычный запуск (например, просто запустили сцену игры в редакторе)
         else if (CampaignLevels != null && CampaignLevels.Count > 0)
         {
             _currentLevelIndex = 0;
@@ -120,7 +119,11 @@ public class GameController : MonoBehaviour
         {
             LoadLevel(_currentLevel);
         }
+    }
 
+    private IEnumerator StartAudioWithDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
         AudioManager.PlayLevelMusic();
         AudioManager.PlayAmbience();
     }
@@ -134,7 +137,6 @@ public class GameController : MonoBehaviour
         _currentScore = 0;
         _isHintActive = false;
         _hintsUsedThisLevel = false;
-
 
         for (int y = 0; y < levelData.Height; y++)
         {
@@ -179,6 +181,10 @@ public class GameController : MonoBehaviour
         UpdateStarsUI();
         FocusCameraOnPlayerInstant();
         UpdateInventoryUI();
+
+        // Запускаем музыку и эмбиенс после полной загрузки уровня
+        StopCoroutine("StartAudioWithDelay");
+        StartCoroutine(StartAudioWithDelay(0.05f));
     }
 
     private void SpawnPieceFromSetup(Vector2Int logicPos, CellSetup setup)
@@ -192,7 +198,6 @@ public class GameController : MonoBehaviour
             PlayerInventory.Add(setup.Piece);
             Debug.Log($"Стартовая фигура добавлена в инвентарь: {setup.Piece}");
         }
-
 
         PieceView prefabToSpawn = GetPrefab(setup.Piece, setup.Alignment);
         if (prefabToSpawn == null) return;
@@ -321,18 +326,16 @@ public class GameController : MonoBehaviour
         {
             setup.IsActive = false;
             logicCell.IsActive = false;
-            
-            // Выключаем клетку (передаем null, так как текстура для выключенной клетки не нужна)
-            _cellViews[pos].SetActiveState(false, null); 
+
+            _cellViews[pos].SetActiveState(false, null);
         }
         else if (!setup.IsActive)
         {
             setup.IsActive = true;
             logicCell.IsActive = true;
-            
-            // Вычисляем правильную шахматную текстуру вместо цвета
+
             Texture2D correctTex = (pos.x + pos.y) % 2 == 0 ? _lightCellTex : _darkCellTex;
-            
+
             _cellViews[pos].SetActiveState(true, correctTex);
         }
 
@@ -467,7 +470,6 @@ public class GameController : MonoBehaviour
         _selectedPiece = _pieceViews[piecePos];
         _currentValidMoves = _engine.GetValidMoves(piecePos);
 
-        // Используем переменную _pieceHoverHeight для модульности
         float targetY = _cellViews[piecePos].transform.position.y + 0.1f + _pieceHoverHeight;
         _selectedPiece.transform.DOMoveY(targetY, _animationDuration).SetEase(Ease.OutQuad);
 
@@ -478,7 +480,7 @@ public class GameController : MonoBehaviour
             else
                 _cellViews[movePos].HighlightAsMove();
         }
-        
+
         AudioManager.PlayPickUpSound(_selectedPiece.transform.position);
     }
 
@@ -486,7 +488,6 @@ public class GameController : MonoBehaviour
     {
         if (_selectedPiece == null) return;
 
-        // Возвращаем строго на базовую высоту (0.5f над клеткой)
         if (_selectedPiece.gameObject != null)
         {
             float baseY = _cellViews[_selectedPiece.LogicPosition].transform.position.y + 0.1f;
@@ -498,7 +499,7 @@ public class GameController : MonoBehaviour
             if (_cellViews.ContainsKey(movePos))
                 _cellViews[movePos].ResetHighlight();
         }
-    
+
         _currentValidMoves.Clear();
         _selectedPiece = null;
     }
@@ -930,13 +931,11 @@ public class GameController : MonoBehaviour
 
     private void ShowVictoryScreen()
     {
-        _isAnimating = true; 
+        _isAnimating = true;
         _victoryPanel.SetActive(true);
 
-        // Проверяем, последний ли это уровень
         bool isLastLevel = (_currentLevelIndex >= CampaignLevels.Count - 1);
 
-        // Переключаем кнопки в зависимости от того, финал это или нет
         if (_nextLevelButton != null) _nextLevelButton.SetActive(!isLastLevel);
         if (_restartButton != null) _restartButton.SetActive(!isLastLevel);
         if (_cutsceneButton != null) _cutsceneButton.SetActive(isLastLevel);
@@ -946,7 +945,7 @@ public class GameController : MonoBehaviour
         {
             if (isLastLevel)
             {
-                _levelProgressText.text = "ИГРА ПРОЙДЕНА!"; // Особый текст для финала
+                _levelProgressText.text = "ИГРА ПРОЙДЕНА!";
             }
             else
             {
@@ -954,10 +953,8 @@ public class GameController : MonoBehaviour
             }
         }
 
-        // --- НОВАЯ СИСТЕМА: Берем текущие звезды + 1 за победу ---
-        int finalStars = CalculateEarnedStars() + 1; 
+        int finalStars = CalculateEarnedStars() + 1;
 
-        // Сохраняем рекорд
         string levelKey = $"LevelProgress_{_currentLevel.name}";
         int previousStars = PlayerPrefs.GetInt(levelKey, 0);
         if (finalStars > previousStars)
@@ -974,12 +971,11 @@ public class GameController : MonoBehaviour
 
         StartCoroutine(AnimateVictoryStarsRoutine(finalStars));
     }
-    
+
     public void UI_MainMenuButton()
     {
         _victoryPanel.SetActive(false);
-        // Загружаем сцену главного меню (убедись, что название совпадает с твоим)
-        SceneManager.LoadScene("StartGame"); 
+        SceneManager.LoadScene("StartGame");
     }
 
     public void UI_WatchCutsceneButton()
