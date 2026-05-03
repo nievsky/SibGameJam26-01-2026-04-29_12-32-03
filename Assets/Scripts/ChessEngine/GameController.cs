@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using DG.Tweening;
 using UnityEngine.UI;
@@ -63,6 +64,11 @@ public class GameController : MonoBehaviour
     [Header("Визуальные эффекты")]
     [SerializeField] private GameObject _morphParticlePrefab;
     
+    [Header("UI Экран Победы")]
+    [SerializeField] private GameObject _victoryPanel; // Сама панель
+    [SerializeField] private TextMeshProUGUI _levelProgressText;  // Текст "Уровень 1 из 10" (если используешь TextMeshPro, замени Text на TextMeshProUGUI)
+    [SerializeField] private GameObject[] _victoryStarObjects = new GameObject[3]; // Звезды на победном экране
+    
     private int _currentlyDisplayedStars = 0;
 
     private int _currentScore = 0;
@@ -99,12 +105,14 @@ public class GameController : MonoBehaviour
 
     private void LoadLevel(LevelData levelData)
     {
+        if (_victoryPanel != null) _victoryPanel.SetActive(false);
         _currentLevel = levelData;
         _engine = new ChessEngine(levelData.Width, levelData.Height);
 
         _currentScore = 0;
         _isHintActive = false;
         _hintsUsedThisLevel = false;
+        
 
         for (int y = 0; y < levelData.Height; y++)
         {
@@ -506,11 +514,10 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
             // --- ПРОВЕРКА ПОБЕДЫ ---
             if (isKingCaptured)
             {
-                _isAnimating = false;
-                Debug.Log("КОРОЛЬ ПОВЕРЖЕН! УРОВЕНЬ ПРОЙДЕН!");
-                EvaluateLevelStars();
-                LoadNextLevel();
-                return; // Прерываем логику (уровень завершен, ответный удар врага не срабатывает)
+                Debug.Log("КОРОЛЬ ПОВЕРЖЕН!");
+                // ЗАМЕНИЛИ LoadNextLevel() НА ЭТО:
+                ShowVictoryScreen(); 
+                return;
             }
 
             if (isKingCaptured)
@@ -864,9 +871,15 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
     private int CalculateEarnedStars()
     {
         int stars = 0;
+        
+        // 1. Звезда за игру без подсказок (горит со старта, гаснет если нажать H)
         if (!_hintsUsedThisLevel) stars++;
-        if (_currentScore >= _currentLevel.Star1ScoreThreshold) stars++;
-        if (_currentScore >= _currentLevel.Star2ScoreThreshold) stars++;
+        
+        // 2. Звезда за рубку врагов (загорается, когда набрали нужное количество)
+        if (_currentScore >= _currentLevel.TargetScoreForStar) stars++;
+
+        // Третью звезду (за Короля) мы здесь не считаем, так как во время игры Король еще жив.
+        
         return Mathf.Clamp(stars, 0, 3);
     }
     
@@ -900,5 +913,65 @@ private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
             bool hasPiece = PlayerInventory.Contains(slot.Type);
             slot.SetUnlocked(hasPiece);
         }
+    }
+    
+    private void ShowVictoryScreen()
+    {
+        _isAnimating = true; 
+        _victoryPanel.SetActive(true);
+
+        if (_levelProgressText != null && CampaignLevels != null)
+        {
+            _levelProgressText.text = $"УРОВЕНЬ {_currentLevelIndex + 1}/{CampaignLevels.Count}";
+        }
+
+        // --- НОВАЯ СИСТЕМА: Берем текущие звезды + 1 за победу ---
+        int finalStars = CalculateEarnedStars() + 1; 
+
+        // Сохраняем рекорд
+        string levelKey = $"LevelProgress_{_currentLevel.name}";
+        int previousStars = PlayerPrefs.GetInt(levelKey, 0);
+        if (finalStars > previousStars)
+        {
+            PlayerPrefs.SetInt(levelKey, finalStars);
+            PlayerPrefs.Save();
+        }
+
+        foreach (var star in _victoryStarObjects)
+        {
+            star.SetActive(false);
+            star.transform.localScale = Vector3.zero;
+        }
+
+        StartCoroutine(AnimateVictoryStarsRoutine(finalStars));
+    }
+
+    private IEnumerator AnimateVictoryStarsRoutine(int count)
+    {
+        // Небольшая пауза перед тем как звезды начнут появляться
+        yield return new WaitForSeconds(0.3f); 
+
+        for (int i = 0; i < count; i++)
+        {
+            GameObject star = _victoryStarObjects[i];
+            star.SetActive(true);
+            
+            // FMODUnity.RuntimeManager.PlayOneShot("event:/UI/Victory_Star");
+            
+            star.transform.DOScale(Vector3.one, 0.5f).SetEase(Ease.OutBack);
+            yield return new WaitForSeconds(0.3f);
+        }
+    }
+    
+    public void UI_NextLevelButton()
+    {
+        _victoryPanel.SetActive(false);
+        LoadNextLevel();
+    }
+
+    public void UI_RestartButton()
+    {
+        _victoryPanel.SetActive(false);
+        RestartLevel();
     }
 }
