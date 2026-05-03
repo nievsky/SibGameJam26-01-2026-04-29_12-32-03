@@ -315,7 +315,7 @@ MonoBehaviour:
   StringsBanks:
   - {fileID: 4960787711833821098}
   cacheVersion: 131848
-  cacheTime: 639134207906029715
+  cacheTime: 639134210377442369
   SerializableEventsDict:
   - key: event:/chess place
     index: 0
@@ -518,7 +518,7 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.bank
   Name: Master
   StudioPath: bank:/Master
-  lastModified: 639134207906004705
+  lastModified: 639134210377422355
   FileSizes: []
   Exists: 1
 --- !u!114 &3499896001485941635
@@ -617,7 +617,7 @@ MonoBehaviour:
   Path: FMOD/Desktop/Master.strings.bank
   Name: Master.strings
   StudioPath: bank:/Master.strings
-  lastModified: 639134207906029715
+  lastModified: 639134210377442369
   FileSizes:
   - Name: 
     Value: 1314
