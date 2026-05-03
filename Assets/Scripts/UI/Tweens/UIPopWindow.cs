@@ -97,4 +97,9 @@ public class UIPopWindow : MonoBehaviour
             Debug.LogWarning("No next scene found in Build Settings!");
         }
     }
+    
+    public void LoadMainMenu()
+    {
+        SceneManager.LoadScene(0);
+    }
 }
