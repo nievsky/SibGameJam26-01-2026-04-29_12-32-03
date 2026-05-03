@@ -67,6 +67,8 @@ public class GameController : MonoBehaviour
     [SerializeField] private GameObject _victoryPanel;
     [SerializeField] private TextMeshProUGUI _levelProgressText;
     [SerializeField] private GameObject[] _victoryStarObjects = new GameObject[3];
+    
+    public static int TargetStartLevelIndex = -1;
 
     private int _currentlyDisplayedStars = 0;
 
@@ -88,8 +90,15 @@ public class GameController : MonoBehaviour
 
     private void Start()
     {
-        if (CampaignLevels != null && CampaignLevels.Count > 0)
+        if (TargetStartLevelIndex >= 0 && CampaignLevels != null && TargetStartLevelIndex < CampaignLevels.Count)
         {
+            _currentLevelIndex = TargetStartLevelIndex;
+            LoadLevel(CampaignLevels[_currentLevelIndex]);
+        }
+        // 2. Обычный запуск (например, просто запустили сцену игры в редакторе)
+        else if (CampaignLevels != null && CampaignLevels.Count > 0)
+        {
+            _currentLevelIndex = 0;
             LoadLevel(CampaignLevels[0]);
         }
         else if (_currentLevel != null)
