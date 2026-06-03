@@ -5,6 +5,8 @@ using UnityEngine;
 using DG.Tweening;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.Localization;
+using UnityEngine.Localization.Settings;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -102,6 +104,18 @@ public class GameController : MonoBehaviour
     private bool _isAnimating = false;
 
     private CellView _currentHoveredCell = null;
+    private int _victoryTextLocalizationVersion;
+
+    private void OnEnable()
+    {
+        LocalizationSettings.SelectedLocaleChanged += OnSelectedLocaleChanged;
+    }
+
+    private void OnDisable()
+    {
+        _victoryTextLocalizationVersion++;
+        LocalizationSettings.SelectedLocaleChanged -= OnSelectedLocaleChanged;
+    }
 
     private void Start()
     {
@@ -118,6 +132,14 @@ public class GameController : MonoBehaviour
         else if (_currentLevel != null)
         {
             LoadLevel(_currentLevel);
+        }
+    }
+
+    private void OnSelectedLocaleChanged(Locale locale)
+    {
+        if (_victoryPanel != null && _victoryPanel.activeSelf)
+        {
+            UpdateVictoryProgressText();
         }
     }
 
@@ -948,17 +970,7 @@ public class GameController : MonoBehaviour
         if (_cutsceneButton != null) _cutsceneButton.SetActive(isLastLevel);
         if (_mainMenuButton != null) _mainMenuButton.SetActive(isLastLevel);
 
-        if (_levelProgressText != null && CampaignLevels != null)
-        {
-            if (isLastLevel)
-            {
-                _levelProgressText.text = "ИГРА ПРОЙДЕНА!";
-            }
-            else
-            {
-                _levelProgressText.text = $"УРОВЕНЬ {_currentLevelIndex + 1} ИЗ {CampaignLevels.Count}";
-            }
-        }
+        UpdateVictoryProgressText();
 
         int finalStars = CalculateEarnedStars() + 1;
 
@@ -986,6 +998,49 @@ public class GameController : MonoBehaviour
         PauseAudioManager.StopSnapshot();
         AudioManager.StopAllPersistentAudio();
         SceneManager.LoadScene("StartGame");
+    }
+
+    private void UpdateVictoryProgressText()
+    {
+        if (_levelProgressText == null || CampaignLevels == null)
+            return;
+
+        bool isLastLevel = (_currentLevelIndex >= CampaignLevels.Count - 1);
+
+        if (isLastLevel)
+        {
+            int version = ++_victoryTextLocalizationVersion;
+            _levelProgressText.text = "The Game Completed!";
+
+            GameLocalization.GetStringAsync("state.game_complete", "The Game Completed!", localized =>
+            {
+                if (version != _victoryTextLocalizationVersion || _levelProgressText == null || !isActiveAndEnabled)
+                    return;
+
+                _levelProgressText.text = localized;
+            });
+            return;
+        }
+
+        int requestVersion = ++_victoryTextLocalizationVersion;
+        int currentLevelNumber = _currentLevelIndex + 1;
+        int levelCount = CampaignLevels.Count;
+
+        _levelProgressText.text = $"LEVEL {currentLevelNumber} OF {levelCount}";
+
+        GameLocalization.GetStringAsync("state.level", "LEVEL", level =>
+        {
+            if (requestVersion != _victoryTextLocalizationVersion || _levelProgressText == null || !isActiveAndEnabled)
+                return;
+
+            GameLocalization.GetStringAsync("state.from", "OF", from =>
+            {
+                if (requestVersion != _victoryTextLocalizationVersion || _levelProgressText == null || !isActiveAndEnabled)
+                    return;
+
+                _levelProgressText.text = $"{level} {currentLevelNumber} {from} {levelCount}";
+            });
+        });
     }
 
     public void UI_WatchCutsceneButton()

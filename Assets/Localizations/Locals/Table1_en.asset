@@ -17,7 +17,128 @@ MonoBehaviour:
   m_SharedData: {fileID: 11400000, guid: 5865766f3376a8e4fa92b92bc5c9e92b, type: 2}
   m_Metadata:
     m_Items: []
-  m_TableData: []
+  m_TableData:
+  - m_Id: 1325254025216
+    m_Localized: Start
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1445420834816
+    m_Localized: Settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1512965906432
+    m_Localized: Restart
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3494023766016
+    m_Localized: You Win!
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3653138882560
+    m_Localized: Menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7156099948544
+    m_Localized: Jester
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7300295925760
+    m_Localized: Debutant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7380168056832
+    m_Localized: A Castling Fan
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7712872833024
+    m_Localized: Pawn Grandmaster
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7795890692096
+    m_Localized: The King of Metamorphoses
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7944750735360
+    m_Localized: Lavender Raf
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8526731386880
+    m_Localized: The Game Completed!
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8647623811072
+    m_Localized: LEVEL
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8699851284480
+    m_Localized: OF
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8902121594880
+    m_Localized: Stars
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17685459738624
+    m_Localized: Levels
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17865672204288
+    m_Localized: Sounds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17956059455488
+    m_Localized: Music
+    m_Metadata:
+      m_Items: []
+  - m_Id: 19134147174400
+    m_Localized: Continue
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20015441747968
+    m_Localized: "How to Play\n\nObjective: Checkmate the King.\nArsenal: Capture
+      pieces (except the King and Queen) to add them to your collection.\nMetamorphosis:
+      You can transform into any piece from your arsenal at any time.\nDefeat: If
+      your piece is captured, the level restarts.\n\nPiece Movement\nPawn: Move 1
+      square forward; capture by moving 1 square diagonally.\nRook: Move in a straight
+      line to the edge of the board or to the first target.\nBishop: Move diagonally
+      to the edge of the board or to the first target.\nKnight: Move in an \u201CL\u201D
+      shape in any direction.\n\nStars per level:\nFirst star: for winning (capturing
+      the King).\nSecond star: for completing the level without hints.\nThird star:
+      for reaching the required number of points (capturing enemies).\n\nTranslated
+      with DeepL.com (free version)"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20160120070144
+    m_Localized: "Highlight the fields under attack with \u201CH\u201D (English)\n(-1
+      star!)"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21724016648192
+    m_Localized: 'nievsky - Programmer
+
+      God_Of_ASSgard - 3D art
+
+      Meowwoun 
+      - 3D art
+
+      konanamaya - 2D art
+
+      AHARI - Composer & Sound Designer
+
+      unik13
+      - Game Design & Level Design
+
+      Cory - Game Design & Narrative'
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23709981843456
+    m_Localized: Next
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23895873396736
+    m_Localized: Outro
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

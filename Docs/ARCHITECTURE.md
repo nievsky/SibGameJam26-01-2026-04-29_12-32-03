@@ -23,9 +23,10 @@ The architecture is centered around one gameplay scene controller:
   - Pause UI uses the new Input System via `InputActionReference`.
   - `Assets/InputSystem_Actions.inputactions` appears to be the default Unity action asset with `Player` and `UI` maps.
 - UI: uGUI plus TextMesh Pro.
+- Localization: Unity Localization package (`com.unity.localization`) with Addressables-backed string tables.
 - Tweening: DOTween from `Assets/Plugins/Demigiant/DOTween`.
 - Audio: FMOD Unity integration from `Assets/Plugins/FMOD`.
-- Persistence: `PlayerPrefs` for earned level stars and FMOD bus volumes.
+- Persistence: `PlayerPrefs` for earned level stars, selected locale, and FMOD bus volumes.
 
 ## Build Scenes
 
@@ -45,8 +46,10 @@ Observed scene responsibilities:
 
 ```text
 StartGame
+  GameLocalization applies saved locale from PlayerPrefs after localization initialization
   MainMenuManager reads CampaignLevels
   PlayerPrefs supplies earned stars per LevelData
+  MainMenuManager resolves localized rank text through the Table1 string table
   LevelSelectButtonUI loads GameScene with GameController.TargetStartLevelIndex
 
 GameScene
@@ -56,7 +59,7 @@ GameScene
   ChessEngine calculates legal moves and enemy threat maps
   Player selects/moves/morphs pieces through mouse and inventory UI
   Capturing enemy pieces increases score and can unlock morph types
-  Capturing the enemy king opens victory UI and saves stars
+  Capturing the enemy king opens localized victory UI and saves stars
   Last level can transition to the next build scene
 
 FinalSCene
@@ -199,6 +202,7 @@ Victory and progress:
 - Capturing the enemy king opens the victory panel.
 - `PlayerPrefs` key format is `LevelProgress_{LevelData.name}`.
 - The menu reads the same key to display earned stars.
+- Victory progress text is localized through `GameLocalization.GetStringAsync`.
 - Star calculation is split between current in-level UI and victory UI:
   - No hint use contributes a star.
   - Reaching `TargetScoreForStar` contributes a star.
@@ -262,9 +266,11 @@ Responsibilities:
 - Read campaign levels.
 - Read per-level stars from PlayerPrefs.
 - Instantiate `LevelSelectButtonUI` buttons.
-- Calculate total stars and rank text.
+- Calculate total stars and localized rank text.
 - Set `GameController.TargetStartLevelIndex`.
 - Load `GameScene`.
+
+`MainMenuManager` listens to `LocalizationSettings.SelectedLocaleChanged` and refreshes the rank label when the selected language changes. Rank text uses async string lookups through `GameLocalization.GetStringAsync` with request-version guards so stale WebGL localization loads cannot overwrite newer locale selections.
 
 ### `LevelSelectButtonUI.cs`
 
@@ -289,6 +295,67 @@ Listens for `VideoPlayer.loopPointReached` and loads either an override build in
 Finds a `TypeWritterEffect` and loads a hard-coded scene index when the typewriter finishes.
 
 Note: this script currently uses deprecated `FindObjectOfType<T>(bool)` and hard-codes scene index `5`, while the current enabled build settings list contains three scenes. This is a maintenance risk unless additional scenes are enabled elsewhere before use.
+
+## Localization Architecture
+
+The project currently supports two locales:
+
+- English: `en`
+- Russian: `ru`
+
+Localization assets live under `Assets/Localizations`:
+
+- `Assets/Localizations/Localization Settings.asset`
+- `Assets/Localizations/Locals/English (en).asset`
+- `Assets/Localizations/Locals/Russian (ru).asset`
+- `Assets/Localizations/Locals/Table1 Shared Data.asset`
+- `Assets/Localizations/Locals/Table1_en.asset`
+- `Assets/Localizations/Locals/Table1_ru.asset`
+
+The active string table collection is named `Table1`. Current keys include:
+
+- UI labels: `ui.start`, `ui.settings`, `ui.restart`, `ui.menu`, `ui.victory`
+- Rank labels: `rank.jester`, `rank.debutant`, `rank.castling_fan`, `rank.pawn_grandmaster`, `rank.king_of_metamorphoses`, `rank.lavender_raf`
+- Victory/progress labels: `state.game_complete`, `state.level`, `state.from`
+
+### `GameLocalization.cs`
+
+`GameLocalization` is a static helper for script-driven localization.
+
+Responsibilities:
+
+- Store the shared string table name, currently `Table1`.
+- Persist the selected locale in `PlayerPrefs` under `Game.Locale`.
+- Apply the saved locale on startup after `LocalizationSettings.InitializationOperation` is ready.
+- Switch locale by code through `SetLocale("en")` and `SetLocale("ru")`.
+- Provide `GetStringAsync(key, fallback, callback)` for runtime-generated text.
+- Provide a synchronous `GetString` fallback for cases where synchronous lookup is acceptable.
+
+The async lookup path is important for WebGL, where localization tables can load later than scene scripts. Dynamic labels that depend on script logic should prefer `GetStringAsync`.
+
+### `LanguageSelector.cs`
+
+`LanguageSelector` is a button-facing MonoBehaviour.
+
+Public UI methods:
+
+- `SetEnglish()`
+- `SetRussian()`
+- `ToggleLanguage()`
+- `SetLanguage(string localeCode)`
+
+It delegates all actual locale switching to `GameLocalization.SetLocale`. Button objects can call these methods from inspector-assigned `OnClick` events while keeping their existing scene-flow callbacks, such as advancing from a language choice screen.
+
+### Static and Dynamic Text Split
+
+Scene-authored labels should use Unity's `LocalizeStringEvent` component directly on the TextMesh Pro text object. This is the preferred path for button labels, menu labels, and other static UI text assigned in the editor.
+
+Script-generated labels should use `GameLocalization.GetStringAsync`. Current script-driven localized text includes:
+
+- Main menu rank labels in `MainMenuManager`.
+- Victory progress text in `GameController`.
+
+Both `MainMenuManager` and `GameController` use integer request-version counters before assigning async results. This prevents a slow lookup from a previous locale from overwriting text after the player switches language again.
 
 ## Pause, Settings, and UI Tweening
 
@@ -365,7 +432,10 @@ CellView / PieceView
   Visual representation of current runtime state.
 
 PlayerPrefs
-  Cross-session progression and audio volume persistence.
+  Cross-session progression, selected locale, and audio volume persistence.
+
+LocalizationSettings / String Tables
+  Authoritative localized UI strings for English and Russian.
 ```
 
 The code generally follows a Model/View/Controller split for board gameplay:
@@ -384,8 +454,9 @@ The split is pragmatic rather than strict. `GameController` currently handles ma
   - `InventorySlotUI`
   - `CameraController`
   - `AudioManager`
+  - `GameLocalization`
   - DOTween
-  - Unity scene management and PlayerPrefs
+  - Unity scene management, Unity Localization, and PlayerPrefs
 
 - `ChessEngine` depends on:
   - `UnityEngine.Vector2Int`
@@ -394,6 +465,7 @@ The split is pragmatic rather than strict. `GameController` currently handles ma
 - UI scripts depend on:
   - uGUI
   - TextMesh Pro
+  - Unity Localization for `LocalizeStringEvent`, `LocalizationSettings`, and string tables
   - DOTween
   - Input System for pause/menu parallax in selected scripts
 
@@ -429,6 +501,22 @@ Changing audio:
 - Use serialized `EventReference`s for reusable UI button sounds where scene designers need per-button control.
 - Confirm FMOD banks contain matching event paths.
 
+Adding localized text:
+
+1. Add the key to `Assets/Localizations/Locals/Table1 Shared Data.asset` through Unity's Localization Tables window.
+2. Fill English and Russian values in `Table1_en` and `Table1_ru`.
+3. For static scene text, add or configure `LocalizeStringEvent` on the TextMesh Pro text component.
+4. For script-generated text, call `GameLocalization.GetStringAsync(key, fallback, callback)`.
+5. For dynamic text assembled from multiple pieces, prefer adding a single formatted localization key later rather than concatenating translated fragments.
+
+Adding a language:
+
+1. Create a new Locale asset.
+2. Add a matching `Table1_<locale>.asset` string table.
+3. Add a button or selector option that calls `LanguageSelector.SetLanguage(localeCode)`.
+4. Confirm the TextMesh Pro font assets include glyphs for the new language.
+5. Verify WebGL builds because localization table loading is asynchronous there.
+
 ## Maintenance Notes
 
 - `GameController` is the largest class and mixes several responsibilities: level composition, rules orchestration, UI, persistence, edit mode, audio, and camera. Future changes will be safer if new systems are extracted around inventory, scoring/progress, level editing, and victory flow.
@@ -440,6 +528,8 @@ Changing audio:
 - `UIPopWindow.StartGame()` and `LoadMainMenu()` load build index `0`; this currently maps to `StartGame`.
 - Scene and file naming have minor inconsistencies, such as `FinalSCene`, `BollboardFollow`, and `TypeWritter`.
 - Several scripts use direct string FMOD event paths and scene names/indexes. These are convenient but can break silently when banks or build settings change.
+- Script-driven localization should avoid synchronous lookups in WebGL-facing UI. Use `GameLocalization.GetStringAsync` and guard against stale callbacks when locale changes can happen while a lookup is in flight.
+- Some localized dynamic text is currently assembled from multiple keys, such as `state.level` + number + `state.from` + count. This works for English/Russian now, but a single smart/formatted string key would scale better for languages with different word order.
 - Current git status shows unrelated modified assets and package files. This document does not account for uncommitted future changes beyond the files inspected.
 
 ## Testing Opportunities
@@ -451,4 +541,5 @@ High-value automated tests would target:
 - `LevelData.OnValidate` resizing behavior.
 - `GameController` progression save/load semantics around `PlayerPrefs` keys.
 - Victory star calculation, especially the current extra victory star.
-
+- Locale switching in StartGame, GameScene victory UI, and WebGL builds.
+- `GameLocalization` saved-locale startup behavior and fallback behavior for missing keys.

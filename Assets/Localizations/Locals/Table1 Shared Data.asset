@@ -13,8 +13,104 @@ MonoBehaviour:
   m_Name: Table1 Shared Data
   m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.SharedTableData
   m_TableCollectionName: Table1
-  m_TableCollectionNameGuidString: 00000000000000000000000000000000
-  m_Entries: []
+  m_TableCollectionNameGuidString: 5865766f3376a8e4fa92b92bc5c9e92b
+  m_Entries:
+  - m_Id: 3653138882560
+    m_Key: ui.menu
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1512965906432
+    m_Key: ui.restart
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1445420834816
+    m_Key: ui.settings
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1325254025216
+    m_Key: ui.start
+    m_Metadata:
+      m_Items: []
+  - m_Id: 3494023766016
+    m_Key: ui.victory
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7156099948544
+    m_Key: rank.jester
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7300295925760
+    m_Key: rank.debutant
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7380168056832
+    m_Key: rank.castling_fan
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7712872833024
+    m_Key: rank.pawn_grandmaster
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7795890692096
+    m_Key: rank.king_of_metamorphoses
+    m_Metadata:
+      m_Items: []
+  - m_Id: 7944750735360
+    m_Key: rank.lavender_raf
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8526731386880
+    m_Key: state.game_complete
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8647623811072
+    m_Key: state.level
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8699851284480
+    m_Key: state.from
+    m_Metadata:
+      m_Items: []
+  - m_Id: 8902121594880
+    m_Key: state.stars
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17685459738624
+    m_Key: ui.levels
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17865672204288
+    m_Key: ui.sounds
+    m_Metadata:
+      m_Items: []
+  - m_Id: 17956059455488
+    m_Key: ui.music
+    m_Metadata:
+      m_Items: []
+  - m_Id: 19134147174400
+    m_Key: ui.continue
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20015441747968
+    m_Key: rules.rule_text
+    m_Metadata:
+      m_Items: []
+  - m_Id: 20160120070144
+    m_Key: rules.rule_hint
+    m_Metadata:
+      m_Items: []
+  - m_Id: 21724016648192
+    m_Key: info.credits
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23709981843456
+    m_Key: ui.next
+    m_Metadata:
+      m_Items: []
+  - m_Id: 23895873396736
+    m_Key: ui.outro
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

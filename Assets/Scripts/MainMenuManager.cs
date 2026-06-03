@@ -3,6 +3,8 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement; 
+using UnityEngine.Localization;
+using UnityEngine.Localization.Settings;
 
 public class MainMenuManager : MonoBehaviour
 {
@@ -18,9 +20,29 @@ public class MainMenuManager : MonoBehaviour
     public TextMeshProUGUI RankText; // Текст для звания (Шут, Дебютант и т.д.)
     public TextMeshProUGUI TotalStarsText; // (Опционально) Текст для показа суммы звезд "Звезды: 15 / 39"
 
+    private int _lastTotalStars;
+    private int _lastMaxStars;
+    private int _rankLocalizationVersion;
+
+    private void OnEnable()
+    {
+        LocalizationSettings.SelectedLocaleChanged += OnSelectedLocaleChanged;
+    }
+
+    private void OnDisable()
+    {
+        _rankLocalizationVersion++;
+        LocalizationSettings.SelectedLocaleChanged -= OnSelectedLocaleChanged;
+    }
+
     private void Start()
     {
         GenerateLevelGridAndCalculateRank();
+    }
+
+    private void OnSelectedLocaleChanged(Locale locale)
+    {
+        UpdateRankUI(_lastTotalStars, _lastMaxStars);
     }
 
     private void GenerateLevelGridAndCalculateRank()
@@ -48,6 +70,9 @@ public class MainMenuManager : MonoBehaviour
             newButton.Setup(indexToLoad, earnedStars, () => LoadGameSceneAtLevel(indexToLoad));
         }
 
+        _lastTotalStars = totalEarnedStars;
+        _lastMaxStars = maxPossibleStars;
+
         // Обновляем UI ранга
         UpdateRankUI(totalEarnedStars, maxPossibleStars);
     }
@@ -57,7 +82,7 @@ public class MainMenuManager : MonoBehaviour
         // Устанавливаем звание
         if (RankText != null)
         {
-            RankText.text = GetRankName(totalStars);
+            UpdateRankText(totalStars);
         }
 
         // Опционально: показываем цифры (например, "12 / 39")
@@ -68,16 +93,45 @@ public class MainMenuManager : MonoBehaviour
     }
 
     // Метод, который определяет звание по количеству звезд
-    private string GetRankName(int stars)
+    private void UpdateRankText(int stars)
     {
-        if (stars == 0) return "Шут";
-        if (stars >= 1 && stars <= 10) return "Жертва дебюта / Дебютант";
-        if (stars >= 11 && stars <= 20) return "Любитель рокировок";
-        if (stars >= 21 && stars <= 30) return "Гроссмейстер пешек";
-        if (stars >= 31 && stars <= 38) return "Король метаморфоз";
-        if (stars >= 39) return "Лавандовый Раф";
+        int version = ++_rankLocalizationVersion;
+        string key = GetRankKey(stars);
+        string fallback = GetRankFallback(stars);
+
+        RankText.text = fallback;
+
+        GameLocalization.GetStringAsync(key, fallback, localized =>
+        {
+            if (version != _rankLocalizationVersion || RankText == null || !isActiveAndEnabled)
+                return;
+
+            RankText.text = localized;
+        });
+    }
+
+    private string GetRankKey(int stars)
+    {
+        if (stars == 0) return "rank.jester";
+        if (stars >= 1 && stars <= 10) return "rank.debutant";
+        if (stars >= 11 && stars <= 20) return "rank.castling_fan";
+        if (stars >= 21 && stars <= 30) return "rank.pawn_grandmaster";
+        if (stars >= 31 && stars <= 38) return "rank.king_of_metamorphoses";
+        if (stars >= 39) return "rank.lavender_raf";
         
-        return "Неизвестный ранг";
+        return "rank.unknown";
+    }
+
+    private string GetRankFallback(int stars)
+    {
+        if (stars == 0) return "Jester";
+        if (stars >= 1 && stars <= 10) return "Debutant";
+        if (stars >= 11 && stars <= 20) return "A Castling Fan";
+        if (stars >= 21 && stars <= 30) return "Pawn Grandmaster";
+        if (stars >= 31 && stars <= 38) return "The King of Metamorphoses";
+        if (stars >= 39) return "Lavender Raf";
+
+        return "Unknown Rank";
     }
 
     private void LoadGameSceneAtLevel(int levelIndex)
