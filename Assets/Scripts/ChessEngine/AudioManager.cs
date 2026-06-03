@@ -1,12 +1,13 @@
 ﻿using UnityEngine;
 using FMODUnity;
+using FMOD.Studio;
 
 public static class AudioManager
 {
-    private static FMOD.Studio.EventInstance _musicInstance;
+    private static EventInstance _musicInstance;
     private static string _currentMusicEvent = "";
 
-    private static FMOD.Studio.EventInstance _ambienceInstance;
+    private static EventInstance _ambienceInstance;
     private static string _currentAmbienceEvent = "";
 
     // --- ЗВУКОВЫЕ ЭФФЕКТЫ ---
@@ -125,7 +126,7 @@ public static class AudioManager
     {
         if (_musicInstance.isValid())
         {
-            if (_currentMusicEvent == eventPath)
+            if (_currentMusicEvent == eventPath && IsPlaying(_musicInstance))
             {
                 Debug.Log("Музыка уже играет");
                 return;
@@ -148,6 +149,9 @@ public static class AudioManager
             _musicInstance.release();
             Debug.Log("Музыка остановлена");
         }
+
+        _musicInstance = default(EventInstance);
+        _currentMusicEvent = "";
     }
 
     public static void SetMusicParameter(string parameterName, float value)
@@ -177,7 +181,7 @@ public static class AudioManager
     {
         if (_ambienceInstance.isValid())
         {
-            if (_currentAmbienceEvent == eventPath)
+            if (_currentAmbienceEvent == eventPath && IsPlaying(_ambienceInstance))
             {
                 Debug.Log("Эмбиенс уже играет");
                 return;
@@ -200,6 +204,33 @@ public static class AudioManager
             _ambienceInstance.release();
             Debug.Log("Эмбиенс остановлен");
         }
+
+        _ambienceInstance = default(EventInstance);
+        _currentAmbienceEvent = "";
+    }
+
+    public static void StopAllPersistentAudio()
+    {
+        StopMusic();
+        StopAmbience();
+    }
+
+    private static bool IsPlaying(EventInstance instance)
+    {
+        if (!instance.isValid())
+        {
+            return false;
+        }
+
+        FMOD.RESULT result = instance.getPlaybackState(out PLAYBACK_STATE state);
+        if (result != FMOD.RESULT.OK)
+        {
+            return false;
+        }
+
+        return state == PLAYBACK_STATE.STARTING
+               || state == PLAYBACK_STATE.PLAYING
+               || state == PLAYBACK_STATE.SUSTAINING;
     }
 
     public static void SetAmbienceParameter(string parameterName, float value)

@@ -68,7 +68,7 @@ public class UIPopWindow : MonoBehaviour
 
     public void RestartLevel()
     {
-        Time.timeScale = 1f;
+        PrepareForSceneLoad();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
@@ -82,11 +82,13 @@ public class UIPopWindow : MonoBehaviour
 
     public void StartGame()
     {
+        PrepareForSceneLoad();
         SceneManager.LoadScene(0);
     }
 
     public void StartNextScene()
     {
+        PrepareForSceneLoad();
         int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
         if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
         {
@@ -100,11 +102,13 @@ public class UIPopWindow : MonoBehaviour
     
     public void LoadMainMenu()
     {
+        PrepareForSceneLoad();
         SceneManager.LoadScene(0);
     }
     
     public void LoadNextScene()
     {
+        PrepareForSceneLoad();
         int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
         if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
         {
@@ -114,5 +118,12 @@ public class UIPopWindow : MonoBehaviour
         {
             Debug.LogWarning("No next scene found in Build Settings!");
         }
+    }
+
+    private void PrepareForSceneLoad()
+    {
+        Time.timeScale = 1f;
+        PauseAudioManager.StopSnapshot();
+        AudioManager.StopAllPersistentAudio();
     }
 }

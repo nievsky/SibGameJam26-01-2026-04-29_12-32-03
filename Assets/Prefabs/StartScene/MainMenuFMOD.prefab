@@ -12,10 +12,9 @@ GameObject:
   - component: {fileID: 990667109134404432}
   - component: {fileID: 6774569118958022704}
   - component: {fileID: 2362851447884945623}
-  - component: {fileID: 8393795990975736094}
   m_Layer: 0
   m_Name: MainMenuFMOD
-  m_TagString: MainCamera
+  m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -50,13 +49,13 @@ MonoBehaviour:
   CollisionTag: 
   EventReference:
     Guid:
-      Data1: -1564180954
-      Data2: 1217857576
-      Data3: 534925747
-      Data4: 1921794001
-    Path: event:/MainMenu/MainMenuAmbience
+      Data1: 1547539833
+      Data2: 1325901322
+      Data3: 1787525529
+      Data4: -101941846
+    Path: event:/ambience
   Event: 
-  EventPlayTrigger: 1
+  EventPlayTrigger: 0
   EventStopTrigger: 2
   AllowFadeout: 1
   TriggerOnce: 0
@@ -81,13 +80,13 @@ MonoBehaviour:
   CollisionTag: 
   EventReference:
     Guid:
-      Data1: 1515436786
-      Data2: 1309819133
-      Data3: -1168750975
-      Data4: 682071137
-    Path: event:/MainMenu/MainMenuMusic
+      Data1: -1188750412
+      Data2: 1235869263
+      Data3: 1351326866
+      Data4: -2068657409
+    Path: event:/MusicMainMenu
   Event: 
-  EventPlayTrigger: 1
+  EventPlayTrigger: 0
   EventStopTrigger: 2
   AllowFadeout: 1
   TriggerOnce: 0
@@ -98,20 +97,6 @@ MonoBehaviour:
   OverrideMinDistance: 1
   OverrideMaxDistance: 20
 --- !u!114 &2362851447884945623
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2570352766687267353}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ae05b1d6d24d13a468a119d3c66b69fa, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MenuMusicStarter
-  emitter: {fileID: 0}
-  emitter2: {fileID: 0}
---- !u!114 &8393795990975736094
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

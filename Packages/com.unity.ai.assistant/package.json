@@ -1,0 +1,29 @@
+{
+  "name": "com.unity.ai.assistant",
+  "displayName": "Assistant",
+  "version": "2.10.0-pre.1",
+  "unity": "6000.0",
+  "description": "Assistant is a generative AI tool integrated into the Unity Editor to explore ideas, answer questions, and perform actions directly in the project. Use natural-language prompts to interact with Assistant in a conversation-based interface. Depending on the mode you choose, Assistant can either provide guidance or take action in your scene and assets.\n\nAsk\nFocuses on explanation and guidance. Assistant answers questions, suggests workflows, and inspects your project using read-only tools without modifying your content.\n\nAgent\nFocuses on action. Assistant can create, modify, or remove objects and assets by calling the Unity Editor tools. All actions respect your permission settings and require approval when needed.\n\nAssistant is designed to be project-aware, helping you work more efficiently without leaving the Unity Editor. It also provides tools for adding generative AI to Unity asset workflows.",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.unity.modules.unitywebrequest": "1.0.0",
+    "com.unity.modules.uielements": "1.0.0",
+    "com.unity.2d.sprite": "1.0.0",
+    "com.unity.mathematics": "1.3.2",
+    "com.unity.nuget.mono-cecil": "1.11.5"
+  },
+  "unityRelease": "60f1",
+  "_upm": {
+    "changelog": "### Added\n\n- Added UI for subagents.\n\n### Fixed\n\n- Fixed \"Setting the parent of a transform which resides in a Prefab Asset is disabled to prevent data corruption\" error.\n- AI dropdown now shows the \"Get More Credits\" banner when the user has no allocated credits, matching the Assistant window behavior.\n- Chat input limited to 4000 chars to prevent visual glitch where pasted text became invisible.\n- Contrast adjusted for generators prompt boxes.\n- Fixed a number of possible \"Resolve of invalid GC handle\" errors during domain reload or package installation.\n- Model preview arrows no longer appear when hovering over models with no additional preview images in the AI model selector.\n- AI toolbar button no longer disappears when the stale HideAIMenu EditorPref is set from a previous 6.2 project.\n\n### Removed\n\n- Removed gtlFast as a hard dependency."
+  },
+  "upmCi": {
+    "footprint": "496e0db0790639a517661807e601f9c251f7572e"
+  },
+  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.ai.assistant@2.10/manual/index.html",
+  "repository": {
+    "url": "https://github.cds.internal.unity3d.com/unity/muse-editor.git",
+    "type": "git",
+    "revision": "b735c45b581797dc4b4c5e9462041b8881f75e1f"
+  },
+  "_fingerprint": "4babd064c7b1898f34651ab093d19badaa0d030c"
+}

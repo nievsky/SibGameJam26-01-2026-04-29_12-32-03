@@ -121,9 +121,16 @@ public class GameController : MonoBehaviour
         }
     }
 
+    private void OnDestroy()
+    {
+        StopCoroutine("StartAudioWithDelay");
+        AudioManager.StopAllPersistentAudio();
+        PauseAudioManager.StopSnapshot();
+    }
+
     private IEnumerator StartAudioWithDelay(float delay)
     {
-        yield return new WaitForSeconds(delay);
+        yield return new WaitForSecondsRealtime(delay);
         AudioManager.PlayLevelMusic();
         AudioManager.PlayAmbience();
     }
@@ -975,6 +982,9 @@ public class GameController : MonoBehaviour
     public void UI_MainMenuButton()
     {
         _victoryPanel.SetActive(false);
+        Time.timeScale = 1f;
+        PauseAudioManager.StopSnapshot();
+        AudioManager.StopAllPersistentAudio();
         SceneManager.LoadScene("StartGame");
     }
 
