@@ -39,7 +39,7 @@ public class VideoEndToNextScene : MonoBehaviour
             : SceneManager.GetActiveScene().buildIndex + 1;
 
         if (indexToLoad < SceneManager.sceneCountInBuildSettings)
-            SceneManager.LoadScene(indexToLoad);
+            SceneTransitionManager.LoadScene(indexToLoad);
         else
             Debug.LogWarning("No next scene found in Build Settings!");
     }

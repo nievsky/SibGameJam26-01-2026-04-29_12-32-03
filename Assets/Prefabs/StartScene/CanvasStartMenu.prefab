@@ -1812,9 +1812,9 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 11500000, guid: f914eec41cf150d47a4c069ebdca5f05, type: 3}
+      - m_Target: {fileID: 5051490682975960706}
         m_TargetAssemblyTypeName: UIPopWindow, Assembly-CSharp
-        m_MethodName: 
+        m_MethodName: Hide
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

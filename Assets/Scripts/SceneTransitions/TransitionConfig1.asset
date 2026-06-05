@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b096dbbfa4be476a9a2e2064b65b5d54, type: 3}
+  m_Name: TransitionConfig1
+  m_EditorClassIdentifier: Assembly-CSharp::SceneTransitionConfig
+  _overlayColor: {r: 0.9433962, g: 0.93782914, b: 0.81434673, a: 1}
+  _overlaySprite: {fileID: -364106322, guid: ac40a97352631c4488cdd4435f501270, type: 3}
+  _preserveSpriteAspect: 0
+  _transitionMaterial: {fileID: 2100000, guid: dfa0ce511eb75fb4f9568727ed6b0ac8, type: 2}
+  _materialProgressProperty: _Progress
+  _coverDuration: 0.45
+  _revealDuration: 0.45
+  _minimumCoveredDuration: 0.15
+  _startLoadingDuringCoverAnimation: 0
+  _useUnscaledTime: 1
+  _coverCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _revealCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    - serializedVersion: 3
+      time: 1
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  _sortingOrder: 32760

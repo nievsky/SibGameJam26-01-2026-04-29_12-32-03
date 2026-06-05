@@ -138,6 +138,6 @@ public class MainMenuManager : MonoBehaviour
     {
         Debug.Log($"Загружаем уровень {levelIndex + 1}...");
         GameController.TargetStartLevelIndex = levelIndex;
-        SceneManager.LoadScene(GameSceneName);
+        SceneTransitionManager.LoadScene(GameSceneName);
     }
 }

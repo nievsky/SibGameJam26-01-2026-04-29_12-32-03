@@ -20,9 +20,7 @@ public class UIPopWindow : MonoBehaviour
 
     void Awake()
     {
-        rectTransform = GetComponent<RectTransform>();
-        originalScale = rectTransform.localScale;
-        rectTransform.localScale = Vector3.zero;
+        InitializeRectTransform();
 
         // Initialize FMOD snapshot once
         if (!snapshotInitialized)
@@ -35,6 +33,9 @@ public class UIPopWindow : MonoBehaviour
     public void Show()
     {
         gameObject.SetActive(true);
+
+        if (!InitializeRectTransform()) return;
+
         rectTransform.DOKill();
         rectTransform.localScale = Vector3.zero;
         rectTransform.DOScale(originalScale, animationDuration).SetEase(ease);
@@ -42,6 +43,8 @@ public class UIPopWindow : MonoBehaviour
 
     public void Hide()
     {
+        if (!InitializeRectTransform()) return;
+
         rectTransform.DOKill();
         rectTransform.DOScale(Vector3.zero, animationDuration)
             .SetEase(Ease.InBack)
@@ -77,13 +80,13 @@ public class UIPopWindow : MonoBehaviour
         fmodSystem.flushCommands();
         FMODUnity.RuntimeManager.GetBus("bus:/").stopAllEvents(FMOD.Studio.STOP_MODE.ALLOWFADEOUT);
 
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        SceneTransitionManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
     }
 
     public void StartGame()
     {
         PrepareForSceneLoad();
-        SceneManager.LoadScene(0);
+        SceneTransitionManager.LoadScene(0);
     }
 
     public void StartNextScene()
@@ -92,7 +95,12 @@ public class UIPopWindow : MonoBehaviour
         int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
         if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
         {
-            SceneManager.LoadScene(nextSceneIndex);
+            if (SceneManager.GetActiveScene().buildIndex == 0)
+            {
+                GameController.TargetStartLevelIndex = -1;
+            }
+
+            SceneTransitionManager.LoadScene(nextSceneIndex);
         }
         else
         {
@@ -103,7 +111,7 @@ public class UIPopWindow : MonoBehaviour
     public void LoadMainMenu()
     {
         PrepareForSceneLoad();
-        SceneManager.LoadScene(0);
+        SceneTransitionManager.LoadScene(0);
     }
     
     public void LoadNextScene()
@@ -112,7 +120,12 @@ public class UIPopWindow : MonoBehaviour
         int nextSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
         if (nextSceneIndex < SceneManager.sceneCountInBuildSettings)
         {
-            SceneManager.LoadScene(nextSceneIndex);
+            if (SceneManager.GetActiveScene().buildIndex == 0)
+            {
+                GameController.TargetStartLevelIndex = -1;
+            }
+
+            SceneTransitionManager.LoadScene(nextSceneIndex);
         }
         else
         {
@@ -125,5 +138,23 @@ public class UIPopWindow : MonoBehaviour
         Time.timeScale = 1f;
         PauseAudioManager.StopSnapshot();
         AudioManager.StopAllPersistentAudio();
+    }
+
+    private bool InitializeRectTransform()
+    {
+        if (rectTransform != null)
+        {
+            return true;
+        }
+
+        rectTransform = GetComponent<RectTransform>();
+        if (rectTransform == null)
+        {
+            return false;
+        }
+
+        originalScale = rectTransform.localScale;
+        rectTransform.localScale = Vector3.zero;
+        return true;
     }
 }

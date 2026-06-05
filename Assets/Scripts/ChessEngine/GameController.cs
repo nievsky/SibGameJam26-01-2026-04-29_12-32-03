@@ -119,9 +119,12 @@ public class GameController : MonoBehaviour
 
     private void Start()
     {
-        if (TargetStartLevelIndex >= 0 && CampaignLevels != null && TargetStartLevelIndex < CampaignLevels.Count)
+        int requestedStartLevelIndex = TargetStartLevelIndex;
+        TargetStartLevelIndex = -1;
+
+        if (requestedStartLevelIndex >= 0 && CampaignLevels != null && requestedStartLevelIndex < CampaignLevels.Count)
         {
-            _currentLevelIndex = TargetStartLevelIndex;
+            _currentLevelIndex = requestedStartLevelIndex;
             LoadLevel(CampaignLevels[_currentLevelIndex]);
         }
         else if (CampaignLevels != null && CampaignLevels.Count > 0)
@@ -997,7 +1000,7 @@ public class GameController : MonoBehaviour
         Time.timeScale = 1f;
         PauseAudioManager.StopSnapshot();
         AudioManager.StopAllPersistentAudio();
-        SceneManager.LoadScene("StartGame");
+        SceneTransitionManager.LoadScene("StartGame");
     }
 
     private void UpdateVictoryProgressText()
@@ -1050,12 +1053,12 @@ public class GameController : MonoBehaviour
         int cutsceneSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
         if (cutsceneSceneIndex < SceneManager.sceneCountInBuildSettings)
         {
-            SceneManager.LoadScene(cutsceneSceneIndex);
+            SceneTransitionManager.LoadScene(cutsceneSceneIndex);
         }
         else
         {
             Debug.LogError("Катсцена не найдена! Проверьте настройки сборки.");
-            SceneManager.LoadScene("MainMenuScene");
+            SceneTransitionManager.LoadScene("StartGame");
         }
     }
 

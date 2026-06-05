@@ -10,6 +10,8 @@ using UnityEditor;
 [DefaultExecutionOrder(-1000)]
 public class CustomCursorManager : MonoBehaviour
 {
+    private const int CursorCanvasSortingOrder = 32700;
+
     private enum CursorState
     {
         Default,
@@ -65,7 +67,7 @@ public class CustomCursorManager : MonoBehaviour
     {
         if (Instance != null && Instance != this)
         {
-            Destroy(gameObject);
+            DestroyDuplicateCursorComponents();
             return;
         }
 
@@ -75,6 +77,18 @@ public class CustomCursorManager : MonoBehaviour
         EnsureDefaultLayerMasks();
         CreateSoftwareCursor();
         ApplyCursor(CursorState.Default, true);
+    }
+
+    private void DestroyDuplicateCursorComponents()
+    {
+        enabled = false;
+
+        if (_cursorCanvas != null)
+        {
+            Destroy(_cursorCanvas.gameObject);
+        }
+
+        Destroy(this);
     }
 
     private void OnEnable()
@@ -263,7 +277,7 @@ public class CustomCursorManager : MonoBehaviour
         canvasObject.transform.SetParent(transform, false);
         _cursorCanvas = canvasObject.AddComponent<Canvas>();
         _cursorCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _cursorCanvas.sortingOrder = short.MaxValue;
+        _cursorCanvas.sortingOrder = CursorCanvasSortingOrder;
 
         CanvasScaler scaler = canvasObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
