@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 8005312156763468730}
   - component: {fileID: 2736180671227036317}
   - component: {fileID: 9102834500841710252}
+  - component: {fileID: 7955140406196249970}
   m_Layer: 0
   m_Name: Particle System
   m_TagString: Untagged
@@ -4894,3 +4895,34 @@ ParticleSystemRenderer:
   m_MeshWeighting1: 1
   m_MeshWeighting2: 1
   m_MeshWeighting3: 1
+--- !u!114 &7955140406196249970
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2712165627269231844}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c2c1f6d8da24764a88db78f45a8c905, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PieceTransformationVfx
+  _playOnAwake: 1
+  _disableExistingRootParticleSystem: 1
+  _selfDestroy: 1
+  _destroyAfter: 1.8
+  _logPlayback: 0
+  _showVisibilityFlash: 0
+  _heightOffset: 0.45
+  _radius: 0.7
+  _coreColor: {r: 1, g: 0.86, b: 0.35, a: 1}
+  _sparkColor: {r: 1, g: 0.48, b: 0.14, a: 1}
+  _magicColor: {r: 0.55, g: 0.2, b: 1, a: 1}
+  _smokeColor: {r: 0.24, g: 0.12, b: 0.08, a: 0.38}
+  _sparkleIntensity: 1.85
+  _hdrGlowIntensity: 3.94
+  _useSmoke: 0
+  _glitterColor: {r: 1, g: 0.96, b: 0.58, a: 1}
+  _twinkleColor: {r: 0.68, g: 0.92, b: 1, a: 1}
+  _particleMaterial: {fileID: 2100000, guid: b3fc8f4ecba146cc889b9c01f0a9a301, type: 2}
+  _sparkleMaterial: {fileID: 0}

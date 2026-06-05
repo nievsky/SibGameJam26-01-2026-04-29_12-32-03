@@ -721,7 +721,14 @@ public class GameController : MonoBehaviour
             particlePos.y += 0.1f;
 
             GameObject effect = Instantiate(_morphParticlePrefab, particlePos, Quaternion.identity);
-            Destroy(effect, 2f);
+            if (effect.TryGetComponent(out PieceTransformationVfx vfx))
+            {
+                vfx.Play();
+            }
+            else
+            {
+                Destroy(effect, 2f);
+            }
         }
 
         Vector3 transformPos = _cellViews[playerPos].transform.position;
@@ -729,10 +736,29 @@ public class GameController : MonoBehaviour
         AudioManager.PlayChangeSound(transformPos);
 
         PieceView oldView = _pieceViews[playerPos];
-        Destroy(oldView.gameObject);
+        oldView.transform.DOKill();
+
+        Vector3 oldPieceScale = oldView.transform.localScale;
+        Sequence oldPieceSequence = DOTween.Sequence();
+        oldPieceSequence.Append(oldView.transform.DOScale(oldPieceScale * 1.08f, 0.06f).SetEase(Ease.OutQuad));
+        oldPieceSequence.Append(oldView.transform.DOScale(Vector3.zero, 0.11f).SetEase(Ease.InBack));
+        oldPieceSequence.OnComplete(() =>
+        {
+            if (oldView != null)
+            {
+                Destroy(oldView.gameObject);
+            }
+        });
         _pieceViews.Remove(playerPos);
 
         PieceView newView = Instantiate(newPrefab, worldPos, Quaternion.identity);
+        Vector3 newPieceScale = newView.transform.localScale;
+        newView.transform.localScale = Vector3.zero;
+
+        Sequence newPieceSequence = DOTween.Sequence();
+        newPieceSequence.SetDelay(0.08f);
+        newPieceSequence.Append(newView.transform.DOScale(newPieceScale * 1.14f, 0.18f).SetEase(Ease.OutBack));
+        newPieceSequence.Append(newView.transform.DOScale(newPieceScale, 0.08f).SetEase(Ease.OutQuad));
         newView.LogicPosition = playerPos;
         newView.Type = newType;
         newView.Alignment = Alignment.Player;

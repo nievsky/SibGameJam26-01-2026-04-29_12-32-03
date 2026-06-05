@@ -18,6 +18,10 @@ The architecture is centered around one gameplay scene controller:
 
 - Unity editor version: `6000.4.4f1`
 - Render pipeline: Universal Render Pipeline, configured through project graphics and quality settings.
+- Post-processing:
+  - `GameScene` has URP camera post-processing enabled on the main camera.
+  - `GameScene` uses a global `Volume` with `Assets/Settings/SampleSceneProfile.asset`.
+  - Bloom is active in that profile and is used by HDR-bright transformation sparkles.
 - Input:
   - Core gameplay uses the legacy `Input` API directly for mouse, keyboard shortcuts, and camera tilt.
   - Pause UI uses the new Input System via `InputActionReference`.
@@ -50,7 +54,8 @@ StartGame
   MainMenuManager reads CampaignLevels
   PlayerPrefs supplies earned stars per LevelData
   MainMenuManager resolves localized rank text through the Table1 string table
-  LevelSelectButtonUI loads GameScene with GameController.TargetStartLevelIndex
+  LevelSelectButtonUI requests GameScene through SceneTransitionManager
+  GameController.TargetStartLevelIndex carries the chosen campaign index
 
 GameScene
   GameController selects the requested LevelData
@@ -58,9 +63,10 @@ GameScene
   GameController instantiates CellView and PieceView objects from LevelData
   ChessEngine calculates legal moves and enemy threat maps
   Player selects/moves/morphs pieces through mouse and inventory UI
+  Morphing plays PieceTransformationVfx and swaps the PieceView with DOTween scale animation
   Capturing enemy pieces increases score and can unlock morph types
   Capturing the enemy king opens localized victory UI and saves stars
-  Last level can transition to the next build scene
+  Last level can transition to the next build scene through SceneTransitionManager
 
 FinalSCene
   Typewriter/video helpers advance to the next scene or menu
@@ -186,6 +192,17 @@ Player input:
 - Left mouse selects player pieces and executes valid moves.
 - Inventory UI calls `OnCardClicked(int)` to morph the current player piece or select an enemy brush in edit mode.
 
+Piece morphing:
+
+1. `SwapPlayerPiece` finds the current player piece and target `PieceType`.
+2. The current `BoardCell.CurrentPiece` is updated in the `ChessEngine`.
+3. `_morphParticlePrefab` is instantiated slightly above the player cell.
+4. If the spawned prefab has `PieceTransformationVfx`, `Play()` is called immediately.
+5. `AudioManager.PlayChangeSound` plays the morph sound at the cell position.
+6. The old `PieceView` is killed with DOTween, briefly bumps, then scales to zero.
+7. The replacement `PieceView` is instantiated at zero scale, overshoots, and settles to its prefab scale.
+8. The piece view dictionary is updated and camera focus is refreshed.
+
 Move resolution:
 
 1. Deselect the current piece and lock animation.
@@ -241,6 +258,52 @@ Responsibilities:
 
 It does not decide legal moves or game outcomes.
 
+### `PieceTransformationVfx.cs`
+
+`PieceTransformationVfx` is the reusable transformation effect attached to the particle prefab assigned to `GameController._morphParticlePrefab`.
+
+Responsibilities:
+
+- Build child `ParticleSystem` objects at runtime.
+- Play the effect on spawn or from an explicit `Play()` call.
+- Stop, clear, play, and immediately emit each child system so the burst is visible on the transformation frame.
+- Optionally self-destroy after `_destroyAfter`.
+- Disable the prefab root particle system when `_disableExistingRootParticleSystem` is enabled, so only the scripted effect plays.
+
+Current generated systems:
+
+- `Sparkle Burst`: main outward star burst.
+- `Shooting Glitters`: fast directional sparkle streaks.
+- `Core Flash`: short center flash.
+- `Arcane Ring`: colored radial burst.
+- `Star Pop`: bigger accent sparkles.
+- `Twinkle Sparkles`: slower lingering sparkles.
+- `Rising Sparks`: upward trailing sparks.
+- `Soft Smoke`: optional smoke layer, currently disabled on the prefab.
+
+The effect uses local simulation space and generated runtime meshes/materials. Sparkle systems render as small 3D star-shard meshes instead of relying only on billboard particles, which keeps the effect readable from the angled gameplay camera. Runtime materials use unlit shaders with HDR color values controlled by `_hdrGlowIntensity`.
+
+Prefab tuning fields:
+
+- `_sparkleIntensity`: scales particle counts.
+- `_hdrGlowIntensity`: multiplies particle RGB values above 1.0 for Bloom.
+- `_radius`: controls effect spread.
+- `_heightOffset`: controls vertical placement above the board cell.
+- `_useSmoke`: toggles the optional smoke system.
+- `_showVisibilityFlash`: diagnostic fallback that shows a solid diamond/ring flash if particle visibility needs debugging.
+- `_logPlayback`: diagnostic log for spawn/playback confirmation.
+
+### Post-Processing and HDR Glow
+
+Transformation glow is a two-part setup:
+
+- `PieceTransformationVfx` outputs HDR-bright particle colors.
+- The `GameScene` main camera renders post-processing and the global volume profile enables Bloom.
+
+The active profile is `Assets/Settings/SampleSceneProfile.asset`. Its Bloom settings are intentionally moderate so the sparkle VFX glows without washing out the whole scene. High-quality Bloom filtering is disabled for a cheaper pass, which is relevant for WebGL performance.
+
+Bloom affects all bright HDR content in the scene. If future materials use emission values above 1.0, they can also bloom.
+
 ### `CameraController.cs`
 
 `CameraController` follows the current player focus point.
@@ -257,6 +320,87 @@ Responsibilities:
 
 ## Menu and Scene Flow
 
+### `SceneTransitionManager.cs`
+
+`SceneTransitionManager` is the reusable scene-loading facade. It is a persistent singleton and should be used instead of direct `SceneManager.LoadScene` calls for normal scene changes.
+
+Responsibilities:
+
+- Expose static `LoadScene(string)`, `LoadScene(int)`, and `ReloadActiveScene()` helpers.
+- Create itself if no scene instance exists.
+- Persist across scenes with `DontDestroyOnLoad`.
+- Destroy duplicate transition manager components when another scene also contains one.
+- Build and own a child `SceneTransitionView`.
+- Block input while the transition overlay is active.
+- Load scenes asynchronously with `allowSceneActivation = false`.
+- Keep the old scene covered until the cover animation, load operation, and minimum covered duration are complete.
+- Reveal after the new scene is activated.
+- Emit transition phases through both static `PhaseChanged` and inspector `UnityEvent`s.
+
+Transition phases:
+
+- `CoverStarted`
+- `CoverCompleted`
+- `SceneActivationStarted`
+- `SceneActivated`
+- `RevealStarted`
+- `RevealCompleted`
+
+The default config is assigned on the manager when present. If no config is assigned, the manager creates a temporary runtime default `SceneTransitionConfig`.
+
+### `SceneTransitionConfig.cs`
+
+`SceneTransitionConfig` is a ScriptableObject-driven transition preset.
+
+It controls:
+
+- Overlay color and optional sprite.
+- Whether the sprite preserves aspect ratio.
+- Optional transition material.
+- The shader progress property name, normally `_Progress`.
+- Cover and reveal durations.
+- Minimum fully-covered duration.
+- Whether async loading starts during the cover animation.
+- Scaled vs unscaled time.
+- Cover/reveal animation curves.
+- Overlay canvas sorting order.
+
+`Assets/Scripts/SceneTransitions/TransitionConfig1.asset` is the current project transition preset.
+
+### `SceneTransitionView.cs`
+
+`SceneTransitionView` renders the transition overlay as a screen-space uGUI canvas.
+
+Responsibilities:
+
+- Create a full-screen `Image` with raycast blocking.
+- Apply color, sprite, preserve-aspect, sorting order, and optional material from `SceneTransitionConfig`.
+- If no material is present, animate `CanvasGroup.alpha`.
+- If a material is present, animate the configured progress property.
+- Clone the configured transition material at runtime so scene loads do not mutate the source asset.
+- Generate a Perlin noise texture when the transition material needs `_NoiseTex` and none is assigned.
+
+### Dissolve Transition Shader
+
+`Assets/Shaders/SceneTransitionDissolve.shader` implements the current UI dissolve transition.
+
+Important properties:
+
+- `_Progress`: cover/reveal progress.
+- `_NoiseTex`: dissolve noise map, generated by `SceneTransitionView` if missing.
+- `_BurnDirection`: direction of the paper-burn wipe.
+- `_NoiseScale` and `_NoiseStrength`: breakup pattern.
+- `_Softness`: dissolve edge softness.
+- `_EdgeColor` and `_EdgeWidth`: colored burn edge.
+
+The shader is authored for uGUI transparent rendering and is driven by `SceneTransitionView`.
+
+### `SceneTransitionFmodAudio.cs`
+
+`SceneTransitionFmodAudio` is an optional FMOD adapter that listens to `SceneTransitionManager.PhaseChanged`.
+
+It exposes one serialized FMOD `EventReference` per transition phase and plays each non-null event with `RuntimeManager.PlayOneShot`.
+
 ### `MainMenuManager.cs`
 
 `MainMenuManager` builds the level-select grid in `StartGame`.
@@ -268,7 +412,7 @@ Responsibilities:
 - Instantiate `LevelSelectButtonUI` buttons.
 - Calculate total stars and localized rank text.
 - Set `GameController.TargetStartLevelIndex`.
-- Load `GameScene`.
+- Load `GameScene` through `SceneTransitionManager`.
 
 `MainMenuManager` listens to `LocalizationSettings.SelectedLocaleChanged` and refreshes the rank label when the selected language changes. Rank text uses async string lookups through `GameLocalization.GetStringAsync` with request-version guards so stale WebGL localization loads cannot overwrite newer locale selections.
 
@@ -288,11 +432,11 @@ Fades from an intro panel to the main menu panel using CanvasGroups and DOTween.
 
 ### `VideoEndToNextScene` in `UI/SceneManager.cs`
 
-Listens for `VideoPlayer.loopPointReached` and loads either an override build index or the next build scene.
+Listens for `VideoPlayer.loopPointReached` and requests either an override build index or the next build scene through `SceneTransitionManager`.
 
 ### `LoadSceneOnEnd.cs`
 
-Finds a `TypeWritterEffect` and loads a hard-coded scene index when the typewriter finishes.
+Finds a `TypeWritterEffect` and requests a hard-coded scene index through `SceneTransitionManager` when the typewriter finishes.
 
 Note: this script currently uses deprecated `FindObjectOfType<T>(bool)` and hard-codes scene index `5`, while the current enabled build settings list contains three scenes. This is a maintenance risk unless additional scenes are enabled elsewhere before use.
 
@@ -359,6 +503,34 @@ Both `MainMenuManager` and `GameController` use integer request-version counters
 
 ## Pause, Settings, and UI Tweening
 
+### `CustomCursorManager.cs`
+
+`CustomCursorManager` is the project-level software cursor system.
+
+Responsibilities:
+
+- Persist across scenes with `DontDestroyOnLoad`.
+- Enforce one active instance; duplicate scene components destroy only themselves.
+- Hide the OS cursor and render a uGUI image cursor in a screen-space overlay canvas.
+- Keep the cursor canvas at sorting order `32700`, below scene transitions but above normal UI.
+- Reset cached `EventSystem` pointer data on scene load.
+- Switch between default and interactable sprites.
+- Detect interactable UI through `EventSystem.RaycastAll`.
+- Detect interactable world objects through 3D and optional 2D raycasts.
+- Force the cursor unlocked/visible as a software cursor when `_forceVisibleAndUnlocked` is enabled.
+
+Default editor-assigned sprites:
+
+- `Assets/Sprites/Cursors/gauntlet_default.png`
+- `Assets/Sprites/Cursors/gauntlet_point.png`
+
+Default hover layer assumptions:
+
+- UI hover layer: `UI`
+- World hover layers: `BoardLayer`, `CellLayer`
+
+When `_onlyInteractiveUiElements` is true, UI hits must have an interactable `Selectable` or pointer handler before the cursor changes to the interactable state.
+
 ### `SceneManagerUI.cs`
 
 Handles pause state through an `InputActionReference`.
@@ -371,6 +543,8 @@ Responsibilities:
 - Show/hide pause and settings pop windows.
 - Start/stop the FMOD paused snapshot through `PauseAudioManager`.
 
+Note: the pause scripts still use Unity's OS cursor APIs. `CustomCursorManager` then hides the OS cursor and draws the software cursor in `LateUpdate`, so cursor-lock behavior should be tested when changing pause or settings flows.
+
 ### `UIPopWindow.cs`
 
 Generic pop-window animation and scene-navigation helper.
@@ -379,6 +553,7 @@ Responsibilities:
 
 - Scale UI panels in/out with DOTween.
 - Continue, restart, start game, load main menu, and load next scene helpers.
+- Route scene changes through `SceneTransitionManager`.
 - On restart, flush FMOD commands and stop all events on the root bus before reloading the active scene.
 
 ### Other UI helpers
@@ -451,6 +626,7 @@ The split is pragmatic rather than strict. `GameController` currently handles ma
 - `GameController` depends on:
   - `ChessEngine`, `BoardCell`, `LevelData`
   - `CellView`, `PieceView`
+  - `PieceTransformationVfx`
   - `InventorySlotUI`
   - `CameraController`
   - `AudioManager`
@@ -472,6 +648,18 @@ The split is pragmatic rather than strict. `GameController` currently handles ma
 - Audio scripts depend on:
   - FMOD Unity integration
   - FMOD event/bus paths configured in banks and inspector references
+
+- Scene transition scripts depend on:
+  - Unity scene management
+  - uGUI canvas, image, canvas group, and graphic raycaster
+  - Optional transition materials/shaders
+  - Optional FMOD event references through `SceneTransitionFmodAudio`
+
+- Custom cursor depends on:
+  - uGUI and `EventSystem`
+  - `Selectable` and pointer event interfaces for UI hover detection
+  - 3D/2D physics raycasts for world hover detection
+  - Scene load callbacks to refresh cached event-system state
 
 ## Current Extension Points
 
@@ -501,6 +689,33 @@ Changing audio:
 - Use serialized `EventReference`s for reusable UI button sounds where scene designers need per-button control.
 - Confirm FMOD banks contain matching event paths.
 
+Changing scene transitions:
+
+1. Create or edit a `SceneTransitionConfig` asset.
+2. Assign overlay color/sprite and timing.
+3. Assign a transition material if a shader-driven effect is needed.
+4. Confirm the material exposes the configured progress property, normally `_Progress`.
+5. Assign the config to the scene's `SceneTransitionManager` or pass it to `SceneTransitionManager.LoadScene`.
+6. Use `SceneTransitionFmodAudio` or manager phase events for synchronized transition sounds.
+
+Changing the transformation VFX:
+
+1. Edit the `PieceTransformationVfx` component on `Assets/Prefabs/Particle System.prefab`.
+2. Use `_sparkleIntensity` for particle count.
+3. Use `_hdrGlowIntensity` for Bloom strength.
+4. Use `_radius` and `_heightOffset` for shape and placement.
+5. Keep `_showVisibilityFlash` off for normal gameplay; enable it only when debugging visibility.
+6. Tune Bloom in `Assets/Settings/SampleSceneProfile.asset` if glow strength should change globally.
+
+Changing custom cursor behavior:
+
+1. Edit the `CustomCursorManager` scene object or prefab instance.
+2. Assign default/interactable sprites and hotspots.
+3. Add UI layers to `_uiInteractableLayers`.
+4. Add board/piece/cell layers to `_worldInteractableLayers`.
+5. Keep `_onlyInteractiveUiElements` enabled when decorative UI graphics should not trigger the interactable cursor.
+6. Test pause/settings transitions because cursor lock/unlock is shared with pause UI scripts.
+
 Adding localized text:
 
 1. Add the key to `Assets/Localizations/Locals/Table1 Shared Data.asset` through Unity's Localization Tables window.
@@ -521,6 +736,8 @@ Adding a language:
 
 - `GameController` is the largest class and mixes several responsibilities: level composition, rules orchestration, UI, persistence, edit mode, audio, and camera. Future changes will be safer if new systems are extracted around inventory, scoring/progress, level editing, and victory flow.
 - `GameController.TargetStartLevelIndex` is static cross-scene state. It is simple and works for level select, but it should be reset deliberately if other entry paths are added.
+- `SceneTransitionManager` is also static and persistent. Keep duplicate scene instances lightweight, because duplicate manager components destroy themselves during `Awake`.
+- Scene-loading scripts should prefer `SceneTransitionManager.LoadScene` over direct `SceneManager.LoadScene` so future transition/audio behavior stays centralized.
 - The board logic is partly decoupled from Unity objects, which makes `ChessEngine` a good candidate for edit-mode or play-mode unit tests.
 - `LoadSceneOnEnd` hard-codes scene index `5`, which does not match the current three enabled build scenes.
 - `LoadSceneOnEnd` uses deprecated `FindObjectOfType<T>(bool)`; Unity recommends `FindFirstObjectByType` or `FindAnyObjectByType`.
@@ -528,6 +745,9 @@ Adding a language:
 - `UIPopWindow.StartGame()` and `LoadMainMenu()` load build index `0`; this currently maps to `StartGame`.
 - Scene and file naming have minor inconsistencies, such as `FinalSCene`, `BollboardFollow`, and `TypeWritter`.
 - Several scripts use direct string FMOD event paths and scene names/indexes. These are convenient but can break silently when banks or build settings change.
+- Bloom is now active in the gameplay volume profile. This improves HDR VFX, but any future HDR/emissive materials may also bloom.
+- WebGL performance should be checked after Bloom/VFX changes. The current Bloom setup disables high-quality filtering to keep the pass cheaper.
+- `CustomCursorManager` forces the software cursor visible/unlocked in `LateUpdate`; this can conflict with future gameplay modes that need a locked hardware cursor.
 - Script-driven localization should avoid synchronous lookups in WebGL-facing UI. Use `GameLocalization.GetStringAsync` and guard against stale callbacks when locale changes can happen while a lookup is in flight.
 - Some localized dynamic text is currently assembled from multiple keys, such as `state.level` + number + `state.from` + count. This works for English/Russian now, but a single smart/formatted string key would scale better for languages with different word order.
 - Current git status shows unrelated modified assets and package files. This document does not account for uncommitted future changes beyond the files inspected.
@@ -541,5 +761,8 @@ High-value automated tests would target:
 - `LevelData.OnValidate` resizing behavior.
 - `GameController` progression save/load semantics around `PlayerPrefs` keys.
 - Victory star calculation, especially the current extra victory star.
+- `GameController.SwapPlayerPiece` spawning and playing `PieceTransformationVfx`.
+- Scene transition phase ordering, input blocking, async load activation, and duplicate manager behavior.
+- Custom cursor UI/world hover detection across scene changes and pause/settings flows.
 - Locale switching in StartGame, GameScene victory UI, and WebGL builds.
 - `GameLocalization` saved-locale startup behavior and fallback behavior for missing keys.
