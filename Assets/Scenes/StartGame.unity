@@ -605,7 +605,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -1567115252, guid: a66e416c9dc2aad4789cb9879b0274c9, type: 3}
+  m_Sprite: {fileID: 21300000, guid: b99af0838e66ed144a02f3a0ebeed68a, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -791,7 +791,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: -1567115252, guid: a66e416c9dc2aad4789cb9879b0274c9, type: 3}
+  m_Sprite: {fileID: 21300000, guid: 096b2a6f3c39d99448fb602dc26a2bd5, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -1117,6 +1117,7 @@ GameObject:
   - component: {fileID: 808287168}
   - component: {fileID: 808287169}
   - component: {fileID: 808287170}
+  - component: {fileID: 808287171}
   m_Layer: 0
   m_Name: StateManager
   m_TagString: Untagged
@@ -1167,6 +1168,36 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LanguageSelector
   _englishLocaleCode: en
   _russianLocaleCode: ru
+--- !u!114 &808287171
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 808287166}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a4bb7c974ab472caa393a455481bc1d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomCursorManager
+  _defaultCursor: {fileID: 21300000, guid: 669d09bf24e1f054fbc8b05eda63cbd7, type: 3}
+  _interactableCursor: {fileID: 21300000, guid: 81d8872e7714d8f4c9ce2c2acc7d3632, type: 3}
+  _defaultHotspot: {x: 0, y: 0}
+  _interactableHotspot: {x: 1, y: 1}
+  _cursorScale: 1
+  _uiInteractableLayers:
+    serializedVersion: 2
+    m_Bits: 32
+  _onlyInteractiveUiElements: 1
+  _worldInteractableLayers:
+    serializedVersion: 2
+    m_Bits: 1024
+  _worldRaycastCamera: {fileID: 0}
+  _worldRaycastDistance: 1000
+  _checkPhysics3D: 1
+  _checkPhysics2D: 0
+  _triggerInteraction: 1
+  _forceVisibleAndUnlocked: 1
 --- !u!1 &875441424
 GameObject:
   m_ObjectHideFlags: 0
@@ -2022,8 +2053,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278255384
-  m_fontColor: {r: 0.09301448, g: 1, b: 0, a: 1}
+    rgba: 4278190080
+  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -2369,8 +2400,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4278255384
-  m_fontColor: {r: 0.09301448, g: 1, b: 0, a: 1}
+    rgba: 4278190080
+  m_fontColor: {r: 0, g: 0, b: 0, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
