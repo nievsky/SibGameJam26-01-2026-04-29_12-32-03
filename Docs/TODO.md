@@ -4,7 +4,7 @@ This backlog focuses on polish, stability, performance, and architecture improve
 
 ## Priority 1: Highest Impact Polish
 
-Status: move/selection/capture impact polish is complete for the current pass. Transformation polish remains valid follow-up work, but was deferred after this session.
+Status: move/selection/capture impact polish and the experimental drag-and-drop control pass are complete for the current session. Transformation polish remains valid follow-up work, but was deferred.
 
 ### Move and Selection Feel
 
@@ -28,6 +28,44 @@ Status: move/selection/capture impact polish is complete for the current pass. T
 - [x] Improve capture feedback.
   - Goal: enemy captures should feel more satisfying and readable.
   - Implemented: editable `CaptureFeedbackVfx` prefab, camera impulse, existing capture sound on landing, and captured-enemy pop/shrink animation.
+
+- [x] Add delayed restart after enemy capture.
+  - Goal: when an enemy captures the player, the player should have a short moment to understand the mistake before the level restarts.
+  - Implemented: `_enemyCaptureRestartDelay` on `GameController` and a delayed restart coroutine that is canceled on manual restart/destroy.
+
+- [x] Add stronger capture camera impact.
+  - Goal: captures should have readable physical impact.
+  - Implemented: separate capture/enemy-capture impulse and shake fields in `GameController`, routed through `CameraController.AddImpulse` and `CameraController.AddShake`.
+
+### Drag-and-Drop Control Experiment
+
+- [x] Add chess.com-style drag-and-drop movement.
+  - Goal: the player should grab the piece, drag it to a valid cell, and release to execute the same move logic.
+  - Implemented: `_enableDragAndDrop` checkbox keeps the feature experimental/debuggable and preserves the click-select fallback when disabled.
+
+- [x] Make dragging responsive while preserving physical feel.
+  - Goal: the piece should follow the cursor immediately, without positional delay.
+  - Implemented: the cursor drives a grab point while visual body inertia handles the alive/weighted feel.
+
+- [x] Add head/top grab pivot.
+  - Goal: dragging should feel like the player is holding the piece by its head instead of its center of mass.
+  - Implemented: `_dragGrabPivotHeightRatio` and `PieceView` renderer-bounds pivot calculation.
+
+- [x] Add drag body inertia.
+  - Goal: the piece body should visually lag/tilt under the grabbed head.
+  - Implemented: `PieceView.BeginDragBodyInertia`, `UpdateDragBodyInertia`, and `EndDragBodyInertia`.
+
+- [x] Prioritize drop targets under the dragged piece.
+  - Goal: angled camera perspective should not cause releases over a cell to move to a different cursor-ray cell.
+  - Implemented: drag release checks the nearest cell under the dragged piece first, then falls back to cursor target resolution.
+
+- [ ] Playtest drag tuning across all piece prefabs.
+  - Goal: different piece shapes should feel consistent.
+  - Suggested checks: `_dragGrabPivotHeightRatio`, `_dragBodyMaxTiltAngle`, `_dragBodyTiltSmoothing`, `_dragLiftHeight`, and `_dragDropCellRadiusMultiplier`.
+
+- [ ] Consider per-piece drag tuning if global values are not enough.
+  - Goal: tall pieces, wide pieces, and asymmetric meshes can have different best grab/tilt behavior.
+  - Suggested implementation: optional serialized overrides on `PieceView` only if playtesting shows a real need.
 
 ### Deferred Transformation Polish
 
@@ -189,8 +227,14 @@ Status: move/selection/capture impact polish is complete for the current pass. T
 - [ ] Test `GameController.SwapPlayerPiece`.
   - Verify board model changes, old view is removed, new view is added, VFX plays, and inventory state is preserved.
 
+- [ ] Test drag-and-drop move resolution.
+  - Verify valid drop, invalid snap-back, under-piece priority, cursor fallback, enemy capture drops, and disabled `_enableDragAndDrop` click fallback.
+
 - [ ] Test capture feedback flow.
   - Verify the prefab script reference is valid, VFX plays, enemy view is removed from lookup, captured enemy pop/shrinks, capture sound plays after landing, and camera impulse is applied.
+
+- [ ] Test enemy-capture delayed restart.
+  - Verify delay timing, manual restart cancellation, scene destroy cleanup, and no duplicate restart coroutines.
 
 - [ ] Test victory star calculation.
   - Include hint/no-hint, target score, and current extra victory-star behavior.
@@ -207,6 +251,9 @@ Status: move/selection/capture impact polish is complete for the current pass. T
 ## Nice-To-Have Ideas
 
 - [x] Add a small camera impulse on capture.
+- [x] Add camera shake on capture.
+- [x] Add delayed restart after enemy capture.
+- [x] Add drag-and-drop piece control.
 - [ ] Add a small camera impulse on transformation.
 - [ ] Add a board-cell "danger shimmer" for threatened cells.
 - [ ] Add first-time tutorial callouts for morphing and threatened cells.

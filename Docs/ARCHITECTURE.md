@@ -190,8 +190,22 @@ Player input:
 
 - `Tab` toggles edit mode.
 - `H` toggles threat hints.
-- Left mouse selects player pieces and executes valid moves.
+- Left mouse uses drag-and-drop for player pieces when `_enableDragAndDrop` is enabled.
+- Drag-and-drop grabs the piece near its rendered head/top, keeps that grab point responsive to the cursor, and lets the body visually lag/tilt underneath through `PieceView` drag inertia.
+- Drag release prioritizes a valid cell under the dragged piece body before falling back to the cell under the cursor. This avoids angled-camera cases where the cursor ray points past the intended cell.
+- The legacy click-select/click-destination flow remains as a debug fallback when drag-and-drop is disabled.
 - Inventory UI calls `OnCardClicked(int)` to morph the current player piece or select an enemy brush in edit mode.
+
+Drag-and-drop tuning fields on `GameController`:
+
+- `_enableDragAndDrop`: enables the experimental drag control scheme.
+- `_dragLiftHeight`: vertical lift applied while dragging.
+- `_dragGrabPivotHeightRatio`: normalized grab point from root/body (`0`) toward rendered top/head (`1`).
+- `_dragBodyMaxTiltAngle`: maximum visual lean angle for body inertia.
+- `_dragBodyTiltSmoothing`: smoothing speed for the inertial tilt.
+- `_dragBodySettleDuration`: time for the body to return to its base rotation after release.
+- `_dragSnapBackDuration`: return duration after invalid drops.
+- `_dragDropCellRadiusMultiplier`: nearest-cell tolerance used for board-plane drop resolution.
 
 Piece morphing:
 
@@ -206,16 +220,19 @@ Piece morphing:
 
 Move resolution:
 
-1. Deselect the current piece and lock animation.
-2. If the destination has an enemy, remove its view from the runtime lookup, add score, unlock the captured piece type, and update UI.
-3. Play capture feedback immediately: editable `CaptureFeedbackVfx` prefab when assigned, runtime fallback otherwise, captured-enemy pop/shrink, and camera impulse.
-4. Move the piece in `ChessEngine`.
-5. Recompute enemy threats.
-6. Move the `PieceView` with DOTween.
-7. Play the capture or place sound once the moving piece lands.
-8. If the captured piece was the enemy king, play victory sounds and show victory UI.
-9. If the moved player piece ends on a threatened cell, the first listed attacker retaliates.
-10. Retaliation moves the enemy into the player cell, destroys the player view, and restarts the level.
+1. Resolve the destination from click or drag input.
+2. For drag input, check the board cell under the dragged piece first; if it is not a valid move, fall back to cursor-based target resolution.
+3. Deselect the current piece and lock animation.
+4. If the destination has an enemy, remove its view from the runtime lookup, add score, unlock the captured piece type, and update UI.
+5. Play capture feedback immediately: editable `CaptureFeedbackVfx` prefab when assigned, runtime fallback otherwise, and captured-enemy pop/shrink.
+6. Move the piece in `ChessEngine`.
+7. Recompute enemy threats.
+8. Move the `PieceView` with DOTween.
+9. Play the capture or place sound once the moving piece lands.
+10. On capture, apply capture camera impact through `CameraController.AddImpulse` and `CameraController.AddShake`.
+11. If the captured piece was the enemy king, play victory sounds and show victory UI.
+12. If the moved player piece ends on a threatened cell, the first listed attacker retaliates.
+13. Retaliation moves the enemy into the player cell, destroys the player view, then restarts the level after `_enemyCaptureRestartDelay`.
 
 Victory and progress:
 
@@ -262,6 +279,11 @@ Responsibilities:
 - Store `PieceType`, `Alignment`, and logical position.
 - Apply selectable-hover scale/tint feedback through DOTween and `MaterialPropertyBlock`.
 - Animate world movement with DOTween `DOJump`.
+- Support drag body inertia:
+  - choose the rendered transform used as the drag body root;
+  - calculate a head/top grab pivot from renderer bounds;
+  - solve root position so the grab pivot follows the cursor;
+  - tilt the body from drag velocity and settle it back after release.
 
 It does not decide legal moves or game outcomes.
 
@@ -352,6 +374,8 @@ Responsibilities:
 - Support edge peeking based on mouse position.
 - Support right-mouse camera tilt with automatic reset.
 - Apply a damped impulse offset through `AddImpulse(Vector3 worldPosition, float strength)`, currently used by capture feedback.
+- Apply short procedural camera shake through `AddShake(float strength, float duration, float frequency)`, also used by capture feedback.
+- Keep impulse and shake offsets separate from the smoothed base follow position so camera impact remains visible even while normal following is active.
 - Snap camera instantly after level load or restart.
 
 ## Menu and Scene Flow

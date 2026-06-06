@@ -104,6 +104,16 @@ public class GameController : MonoBehaviour
     [SerializeField] private float _cellHoverLiftHeight = 0.12f;
     [SerializeField] private float _cellHoverLiftDuration = 0.12f;
 
+    [Header("Drag And Drop")]
+    [SerializeField] private bool _enableDragAndDrop = true;
+    [SerializeField] private float _dragLiftHeight = 0.55f;
+    [SerializeField, Range(0f, 1f)] private float _dragGrabPivotHeightRatio = 0.9f;
+    [SerializeField] private float _dragBodyMaxTiltAngle = 10f;
+    [SerializeField] private float _dragBodyTiltSmoothing = 18f;
+    [SerializeField] private float _dragBodySettleDuration = 0.12f;
+    [SerializeField] private float _dragSnapBackDuration = 0.16f;
+    [SerializeField] private float _dragDropCellRadiusMultiplier = 0.58f;
+
     [Header("Текстуры доски")]
     [SerializeField] private Texture2D _lightCellTex;
     [SerializeField] private Texture2D _darkCellTex;
@@ -132,6 +142,13 @@ public class GameController : MonoBehaviour
     private Vector2Int? _currentLiftedCell = null;
     private Tween _currentLiftedPieceTween = null;
     private PieceView _currentLiftedPieceTweenOwner = null;
+    private PieceView _dragPiece = null;
+    private CellView _dragHoveredCell = null;
+    private Vector2Int _dragOrigin;
+    private Vector3 _lastDragGrabWorldPosition = Vector3.zero;
+    private float _dragGrabPivotWorldHeight = 0f;
+    private bool _hasLastDragGrabWorldPosition = false;
+    private bool _isDraggingPiece = false;
     private Coroutine _enemyCaptureRestartRoutine = null;
     private int _victoryTextLocalizationVersion;
 
@@ -329,8 +346,12 @@ public class GameController : MonoBehaviour
         }
         else
         {
-            HandleHover();
-            HandleMouseInput();
+            bool dragHandledInput = HandleDragInput();
+            if (!dragHandledInput)
+            {
+                HandleHover();
+                HandleMouseInput();
+            }
         }
     }
 
@@ -409,6 +430,457 @@ public class GameController : MonoBehaviour
         EditorUtility.SetDirty(_currentLevel);
         AssetDatabase.SaveAssets();
 #endif
+    }
+
+    private bool HandleDragInput()
+    {
+        if (!_enableDragAndDrop)
+            return false;
+
+        if (_isDraggingPiece)
+        {
+            if (!IsDragPieceStillValid())
+            {
+                ClearDragHoveredCell();
+                ClearDragState();
+                return false;
+            }
+
+            UpdateDraggedPiecePosition();
+            UpdateDragHoveredCell();
+
+            if (Input.GetMouseButtonUp(0))
+            {
+                CompleteDragInput();
+            }
+
+            return true;
+        }
+
+        if (Input.GetMouseButtonDown(0) && TryGetPlayerPieceUnderMouse(out PieceView piece))
+        {
+            BeginDraggingPiece(piece);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void BeginDraggingPiece(PieceView piece)
+    {
+        if (piece == null || !_pieceViews.TryGetValue(piece.LogicPosition, out PieceView registeredPiece) || registeredPiece != piece)
+            return;
+
+        ClearDragHoveredCell();
+        ClearHover();
+
+        if (_selectedPiece != null)
+        {
+            if (_selectedPiece == piece)
+                ClearSelectionWithoutReturningPiece();
+            else
+                DeselectPiece();
+        }
+
+        _dragPiece = piece;
+        _dragOrigin = piece.LogicPosition;
+        _lastDragGrabWorldPosition = piece.transform.position;
+        _dragGrabPivotWorldHeight = 0f;
+        _hasLastDragGrabWorldPosition = false;
+        _isDraggingPiece = true;
+
+        _selectedPiece = piece;
+        _currentValidMoves = _engine.GetValidMoves(_dragOrigin);
+        HighlightCurrentValidMoves();
+
+        KillPieceLiftTween(piece);
+        piece.transform.DOKill(false);
+        piece.ResetInteractionFeedback();
+        piece.BeginDragBodyInertia(_dragGrabPivotHeightRatio);
+        _dragGrabPivotWorldHeight = Mathf.Max(0f, piece.GetDragGrabPivotWorldPosition().y - piece.transform.position.y);
+
+        AudioManager.PlayPickUpSound(piece.transform.position);
+        UpdateDraggedPiecePosition();
+        UpdateDragHoveredCell();
+    }
+
+    private void UpdateDraggedPiecePosition()
+    {
+        if (_dragPiece == null || !TryGetDragGrabWorldPosition(out Vector3 targetGrabWorldPosition))
+            return;
+
+        float deltaTime = Mathf.Max(Time.deltaTime, 0.0001f);
+        Vector3 dragVelocity = _hasLastDragGrabWorldPosition
+            ? (targetGrabWorldPosition - _lastDragGrabWorldPosition) / deltaTime
+            : Vector3.zero;
+
+        _dragPiece.UpdateDragBodyInertia(dragVelocity, _dragBodyMaxTiltAngle, _dragBodyTiltSmoothing);
+        _dragPiece.transform.position = _dragPiece.GetDragRootPositionForGrabPoint(targetGrabWorldPosition);
+
+        _lastDragGrabWorldPosition = targetGrabWorldPosition;
+        _hasLastDragGrabWorldPosition = true;
+    }
+
+    private bool TryGetDragGrabWorldPosition(out Vector3 worldPosition)
+    {
+        worldPosition = Vector3.zero;
+
+        if (!_cellViews.TryGetValue(_dragOrigin, out CellView originCell))
+            return false;
+
+        float grabHeight = originCell.BaseWorldPosition.y + 0.1f + _dragLiftHeight + _dragGrabPivotWorldHeight;
+        Plane dragPlane = new Plane(Vector3.up, new Vector3(0f, grabHeight, 0f));
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+
+        if (!dragPlane.Raycast(ray, out float enter))
+            return false;
+
+        worldPosition = ray.GetPoint(enter);
+        worldPosition.y = grabHeight;
+        return true;
+    }
+
+    private void UpdateDragHoveredCell()
+    {
+        if (TryGetPrioritizedDragTarget(out _, out CellView targetCell, out _, false))
+        {
+            SetDragHoveredCell(targetCell);
+        }
+        else
+        {
+            SetDragHoveredCell(null);
+        }
+    }
+
+    private void CompleteDragInput()
+    {
+        if (TryGetPrioritizedDragTarget(out Vector2Int dropPos, out _, out Vector2Int? invalidTarget, true))
+        {
+            CommitDraggedMove(dropPos);
+        }
+        else
+        {
+            CancelDraggedMove(invalidTarget);
+        }
+    }
+
+    private void CommitDraggedMove(Vector2Int targetPos)
+    {
+        PieceView piece = _dragPiece;
+        Vector2Int origin = _dragOrigin;
+
+        if (piece != null)
+        {
+            piece.EndDragBodyInertia(_dragBodySettleDuration);
+        }
+
+        ClearDragHoveredCell();
+        ClearSelectionWithoutReturningPiece();
+        ClearDragState();
+
+        ExecuteMove(origin, targetPos);
+    }
+
+    private void CancelDraggedMove(Vector2Int? invalidTarget)
+    {
+        PieceView piece = _dragPiece;
+        Vector2Int origin = _dragOrigin;
+
+        ClearDragHoveredCell();
+        ClearSelectionWithoutReturningPiece();
+        ClearDragState();
+
+        Vector2Int feedbackPos = invalidTarget ?? origin;
+        if (feedbackPos != origin && _cellViews.ContainsKey(feedbackPos))
+        {
+            PlayInvalidClickFeedback(feedbackPos);
+        }
+
+        if (piece == null || !_cellViews.ContainsKey(origin))
+            return;
+
+        _isAnimating = true;
+        piece.transform.DOKill(false);
+        piece.EndDragBodyInertia(_dragBodySettleDuration);
+        piece.transform
+            .DOMove(GetPieceRestWorldPosition(origin), _dragSnapBackDuration)
+            .SetEase(Ease.OutBack)
+            .SetLink(piece.gameObject)
+            .OnComplete(() => _isAnimating = false);
+    }
+
+    private bool IsDragPieceStillValid()
+    {
+        return _dragPiece != null
+            && _pieceViews.TryGetValue(_dragOrigin, out PieceView registeredPiece)
+            && registeredPiece == _dragPiece
+            && _dragPiece.Alignment == Alignment.Player;
+    }
+
+    private void ClearDragState()
+    {
+        _dragPiece = null;
+        _isDraggingPiece = false;
+        _lastDragGrabWorldPosition = Vector3.zero;
+        _dragGrabPivotWorldHeight = 0f;
+        _hasLastDragGrabWorldPosition = false;
+    }
+
+    private void SetDragHoveredCell(CellView cell)
+    {
+        if (cell == _dragHoveredCell)
+            return;
+
+        ClearDragHoveredCell();
+
+        _dragHoveredCell = cell;
+        if (_dragHoveredCell == null)
+            return;
+
+        if (_currentValidMoves.Contains(_dragHoveredCell.LogicPosition))
+        {
+            _dragHoveredCell.SetValidDestinationHover(true);
+        }
+        else
+        {
+            _dragHoveredCell.HighlightAsHover();
+        }
+    }
+
+    private void ClearDragHoveredCell()
+    {
+        if (_dragHoveredCell == null)
+            return;
+
+        CellView cell = _dragHoveredCell;
+        _dragHoveredCell = null;
+
+        cell.SetValidDestinationHover(false);
+        RestoreCellHighlight(cell.LogicPosition);
+    }
+
+    private bool TryGetPlayerPieceUnderMouse(out PieceView piece)
+    {
+        piece = null;
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, GetBoardInteractionMask());
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            PieceView hitPiece = hit.collider.GetComponentInParent<PieceView>();
+            if (hitPiece != null
+                && hitPiece.Alignment == Alignment.Player
+                && _pieceViews.TryGetValue(hitPiece.LogicPosition, out PieceView registeredPiece)
+                && registeredPiece == hitPiece)
+            {
+                piece = hitPiece;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryGetBoardTargetFromCursor(out Vector2Int logicPos, out CellView cell)
+    {
+        if (TryGetBoardTargetUnderMouse(out logicPos, out cell))
+            return true;
+
+        return TryGetNearestCellOnBoardPlane(out logicPos, out cell);
+    }
+
+    private bool TryGetPrioritizedDragTarget(out Vector2Int logicPos, out CellView cell, out Vector2Int? invalidTarget, bool requireValidMove)
+    {
+        invalidTarget = null;
+
+        if (TryGetBoardTargetUnderDraggedPiece(out logicPos, out cell))
+        {
+            invalidTarget = logicPos;
+            if (_currentValidMoves.Contains(logicPos))
+                return true;
+
+            if (!requireValidMove)
+            {
+                return TryGetBoardTargetFromCursor(out logicPos, out cell);
+            }
+        }
+
+        if (TryGetBoardTargetFromCursor(out logicPos, out cell))
+        {
+            invalidTarget = logicPos;
+            return !requireValidMove || _currentValidMoves.Contains(logicPos);
+        }
+
+        logicPos = default;
+        cell = null;
+        return false;
+    }
+
+    private bool TryGetBoardTargetUnderDraggedPiece(out Vector2Int logicPos, out CellView cell)
+    {
+        logicPos = default;
+        cell = null;
+
+        if (_dragPiece == null)
+            return false;
+
+        return TryGetNearestCellToWorldPosition(_dragPiece.transform.position, out logicPos, out cell);
+    }
+
+    private bool TryGetBoardTargetUnderMouse(out Vector2Int logicPos, out CellView cell)
+    {
+        logicPos = default;
+        cell = null;
+
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, GetBoardInteractionMask());
+        System.Array.Sort(hits, (a, b) => a.distance.CompareTo(b.distance));
+
+        foreach (RaycastHit hit in hits)
+        {
+            PieceView hitPiece = hit.collider.GetComponentInParent<PieceView>();
+            if (hitPiece != null)
+            {
+                if (hitPiece == _dragPiece)
+                    continue;
+
+                logicPos = hitPiece.LogicPosition;
+                return _cellViews.TryGetValue(logicPos, out cell);
+            }
+
+            CellView hitCell = hit.collider.GetComponentInParent<CellView>();
+            if (hitCell != null)
+            {
+                logicPos = hitCell.LogicPosition;
+                cell = hitCell;
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool TryGetNearestCellOnBoardPlane(out Vector2Int logicPos, out CellView cell)
+    {
+        logicPos = default;
+        cell = null;
+
+        if (_cellViews.Count == 0)
+            return false;
+
+        float boardY = 0f;
+        if (_cellViews.TryGetValue(_dragOrigin, out CellView originCell))
+        {
+            boardY = originCell.BaseWorldPosition.y;
+        }
+        else
+        {
+            foreach (CellView cellView in _cellViews.Values)
+            {
+                boardY = cellView.BaseWorldPosition.y;
+                break;
+            }
+        }
+
+        Plane boardPlane = new Plane(Vector3.up, new Vector3(0f, boardY, 0f));
+        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        if (!boardPlane.Raycast(ray, out float enter))
+            return false;
+
+        Vector3 cursorWorldPosition = ray.GetPoint(enter);
+
+        return TryGetNearestCellToWorldPosition(cursorWorldPosition, out logicPos, out cell);
+    }
+
+    private bool TryGetNearestCellToWorldPosition(Vector3 worldPosition, out Vector2Int logicPos, out CellView cell)
+    {
+        logicPos = default;
+        cell = null;
+
+        float maxDistance = Mathf.Max(0.01f, _cellSize * _dragDropCellRadiusMultiplier);
+        float maxDistanceSqr = maxDistance * maxDistance;
+        float bestDistanceSqr = float.PositiveInfinity;
+
+        foreach (KeyValuePair<Vector2Int, CellView> kvp in _cellViews)
+        {
+            Vector3 cellPosition = kvp.Value.BaseWorldPosition;
+            Vector2 delta = new Vector2(worldPosition.x - cellPosition.x, worldPosition.z - cellPosition.z);
+            float distanceSqr = delta.sqrMagnitude;
+            if (distanceSqr < bestDistanceSqr && distanceSqr <= maxDistanceSqr)
+            {
+                bestDistanceSqr = distanceSqr;
+                logicPos = kvp.Key;
+                cell = kvp.Value;
+            }
+        }
+
+        return cell != null;
+    }
+
+    private int GetBoardInteractionMask()
+    {
+        return _boardLayerMask.value | _cellLayer.value;
+    }
+
+    private Vector3 GetPieceRestWorldPosition(Vector2Int logicPos)
+    {
+        Vector3 worldPosition = _cellViews[logicPos].BaseWorldPosition;
+        worldPosition.y += 0.1f;
+        return worldPosition;
+    }
+
+    private void ClearSelectionWithoutReturningPiece()
+    {
+        ClearHover();
+
+        if (_selectedPiece != null && _selectedPiece.gameObject != null)
+        {
+            KillPieceLiftTween(_selectedPiece);
+        }
+
+        foreach (Vector2Int movePos in _currentValidMoves)
+        {
+            if (_cellViews.ContainsKey(movePos))
+            {
+                _cellViews[movePos].ResetHighlight();
+            }
+        }
+
+        _currentValidMoves.Clear();
+        _selectedPiece = null;
+    }
+
+    private void HighlightCurrentValidMoves()
+    {
+        foreach (Vector2Int movePos in _currentValidMoves)
+        {
+            if (!_cellViews.ContainsKey(movePos))
+                continue;
+
+            if (_engine.GetCell(movePos).HasEnemy)
+                _cellViews[movePos].HighlightAsAttack();
+            else
+                _cellViews[movePos].HighlightAsMove();
+        }
+    }
+
+    private void RestoreCellHighlight(Vector2Int pos)
+    {
+        if (!_cellViews.TryGetValue(pos, out CellView cellView))
+            return;
+
+        if (_currentValidMoves.Contains(pos))
+        {
+            if (_engine.GetCell(pos).HasEnemy)
+                cellView.HighlightAsAttack();
+            else
+                cellView.HighlightAsMove();
+        }
+        else
+        {
+            cellView.ResetHighlight();
+        }
     }
 
     private void HandleHover()
@@ -1075,6 +1547,8 @@ public class GameController : MonoBehaviour
 
     private void ClearBoard()
     {
+        ClearDragHoveredCell();
+        ClearDragState();
         ClearHover();
 
         foreach (var cell in _cellViews.Values) Destroy(cell.gameObject);
