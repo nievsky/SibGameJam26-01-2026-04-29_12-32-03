@@ -66,6 +66,14 @@ public class GameController : MonoBehaviour
     [Header("Визуальные эффекты")]
     [SerializeField] private GameObject _morphParticlePrefab;
 
+    [Header("Capture Feedback")]
+    [SerializeField] private bool _enableCaptureFeedback = true;
+    [SerializeField] private CaptureFeedbackVfx _captureFeedbackPrefab;
+    [SerializeField] private float _captureFeedbackIntensity = 1f;
+    [SerializeField] private float _captureEnemyShrinkDuration = 0.14f;
+    [SerializeField] private float _captureEnemyPopScale = 1.08f;
+    [SerializeField] private float _captureCameraImpulse = 0.16f;
+
     [Header("UI Экран Победы")]
     [SerializeField] private GameObject _victoryPanel;
     [SerializeField] private TextMeshProUGUI _levelProgressText;
@@ -80,6 +88,10 @@ public class GameController : MonoBehaviour
     [Header("Настройки анимации")]
     [SerializeField] private float _pieceHoverHeight = 0.3f;
     [SerializeField] private float _animationDuration = 0.2f;
+
+    [Header("Cell Hover Lift")]
+    [SerializeField] private float _cellHoverLiftHeight = 0.12f;
+    [SerializeField] private float _cellHoverLiftDuration = 0.12f;
 
     [Header("Текстуры доски")]
     [SerializeField] private Texture2D _lightCellTex;
@@ -104,6 +116,11 @@ public class GameController : MonoBehaviour
     private bool _isAnimating = false;
 
     private CellView _currentHoveredCell = null;
+    private PieceView _currentHoveredPiece = null;
+    private PieceView _currentLiftedPiece = null;
+    private Vector2Int? _currentLiftedCell = null;
+    private Tween _currentLiftedPieceTween = null;
+    private PieceView _currentLiftedPieceTweenOwner = null;
     private int _victoryTextLocalizationVersion;
 
     private void OnEnable()
@@ -234,7 +251,7 @@ public class GameController : MonoBehaviour
         PieceView prefabToSpawn = GetPrefab(setup.Piece, setup.Alignment);
         if (prefabToSpawn == null) return;
 
-        Vector3 worldPos = _cellViews[logicPos].transform.position;
+        Vector3 worldPos = _cellViews[logicPos].BaseWorldPosition;
         worldPos.y += 0.1f;
 
         PieceView pieceView = Instantiate(prefabToSpawn, worldPos, Quaternion.identity);
@@ -282,6 +299,7 @@ public class GameController : MonoBehaviour
         {
             IsEditMode = !IsEditMode;
             Debug.Log(IsEditMode ? "РЕЖИМ РЕДАКТОРА ВКЛЮЧЕН" : "РЕЖИМ РЕДАКТОРА ВЫКЛЮЧЕН");
+            ClearHover();
             DeselectPiece();
         }
 
@@ -387,6 +405,7 @@ public class GameController : MonoBehaviour
         if (Physics.Raycast(ray, out RaycastHit hit, 100f))
         {
             CellView targetCell = null;
+            PieceView targetPiece = null;
 
             if (hit.collider.TryGetComponent(out CellView hitCell))
             {
@@ -394,18 +413,34 @@ public class GameController : MonoBehaviour
             }
             else if (hit.collider.TryGetComponent(out PieceView hitPiece))
             {
-                targetCell = _cellViews[hitPiece.LogicPosition];
+                targetPiece = hitPiece;
+
+                if (_cellViews.TryGetValue(hitPiece.LogicPosition, out CellView pieceCell))
+                {
+                    targetCell = pieceCell;
+                }
             }
+
+            SetHoveredPiece(CanShowSelectablePieceHover(targetPiece) ? targetPiece : null);
 
             if (targetCell != null && targetCell != _currentHoveredCell)
             {
-                ClearHover();
+                ClearHoveredCell();
                 _currentHoveredCell = targetCell;
+                SetHoveredCellLift(_currentHoveredCell);
 
-                if (!_currentValidMoves.Contains(_currentHoveredCell.LogicPosition))
+                if (_currentValidMoves.Contains(_currentHoveredCell.LogicPosition))
+                {
+                    _currentHoveredCell.SetValidDestinationHover(true);
+                }
+                else
                 {
                     _currentHoveredCell.HighlightAsHover();
                 }
+            }
+            else if (targetCell == null)
+            {
+                ClearHoveredCell();
             }
         }
         else
@@ -416,8 +451,17 @@ public class GameController : MonoBehaviour
 
     private void ClearHover()
     {
+        ClearHoveredCell();
+        ClearPieceHover();
+    }
+
+    private void ClearHoveredCell()
+    {
         if (_currentHoveredCell != null)
         {
+            _currentHoveredCell.SetValidDestinationHover(false);
+            ClearHoveredCellLift();
+
             if (_currentValidMoves.Contains(_currentHoveredCell.LogicPosition))
             {
                 if (_engine.GetCell(_currentHoveredCell.LogicPosition).HasEnemy)
@@ -432,6 +476,130 @@ public class GameController : MonoBehaviour
 
             _currentHoveredCell = null;
         }
+    }
+
+    private void SetHoveredPiece(PieceView piece)
+    {
+        if (piece == _currentHoveredPiece)
+            return;
+
+        ClearPieceHover();
+
+        _currentHoveredPiece = piece;
+        if (_currentHoveredPiece != null)
+        {
+            _currentHoveredPiece.SetSelectableHover(true);
+        }
+    }
+
+    private void ClearPieceHover()
+    {
+        if (_currentHoveredPiece != null)
+        {
+            _currentHoveredPiece.SetSelectableHover(false);
+        }
+
+        _currentHoveredPiece = null;
+    }
+
+    private bool CanShowSelectablePieceHover(PieceView piece)
+    {
+        if (piece == null || piece.Alignment != Alignment.Player || piece == _selectedPiece)
+            return false;
+
+        return _pieceViews.TryGetValue(piece.LogicPosition, out PieceView registeredPiece) && registeredPiece == piece;
+    }
+
+    private bool ShouldPlayInvalidClickFeedback(BoardCell logicCell)
+    {
+        if (!logicCell.IsActive)
+            return true;
+
+        if (_selectedPiece != null)
+            return true;
+
+        return logicCell.HasEnemy;
+    }
+
+    private void PlayInvalidClickFeedback(Vector2Int pos)
+    {
+        if (_cellViews.TryGetValue(pos, out CellView cellView))
+        {
+            cellView.PlayInvalidClickFeedback();
+        }
+    }
+
+    private void SetHoveredCellLift(CellView cellView)
+    {
+        Vector2Int pos = cellView.LogicPosition;
+
+        cellView.SetHoverLift(true, _cellHoverLiftHeight, _cellHoverLiftDuration);
+        _currentLiftedCell = pos;
+
+        if (_pieceViews.TryGetValue(pos, out PieceView pieceView))
+        {
+            _currentLiftedPiece = pieceView;
+            MovePieceForCellLift(pieceView, pos, true);
+        }
+    }
+
+    private void ClearHoveredCellLift()
+    {
+        if (_currentLiftedCell.HasValue && _cellViews.TryGetValue(_currentLiftedCell.Value, out CellView cellView))
+        {
+            cellView.SetHoverLift(false, _cellHoverLiftHeight, _cellHoverLiftDuration);
+        }
+
+        if (_currentLiftedPiece != null && _currentLiftedCell.HasValue)
+        {
+            MovePieceForCellLift(_currentLiftedPiece, _currentLiftedCell.Value, false);
+        }
+
+        _currentLiftedCell = null;
+        _currentLiftedPiece = null;
+    }
+
+    private void MovePieceForCellLift(PieceView pieceView, Vector2Int cellPos, bool isLifted)
+    {
+        if (!_cellViews.TryGetValue(cellPos, out CellView cellView))
+            return;
+
+        KillPieceLiftTween(pieceView);
+
+        float targetY = cellView.BaseWorldPosition.y + 0.1f;
+        if (pieceView == _selectedPiece)
+        {
+            targetY += _pieceHoverHeight;
+        }
+
+        if (isLifted)
+        {
+            targetY += _cellHoverLiftHeight;
+        }
+
+        _currentLiftedPieceTween = pieceView.transform
+            .DOMoveY(targetY, _cellHoverLiftDuration)
+            .SetEase(Ease.OutQuad)
+            .SetLink(pieceView.gameObject)
+            .OnKill(() =>
+            {
+                if (_currentLiftedPieceTweenOwner == pieceView)
+                {
+                    _currentLiftedPieceTween = null;
+                    _currentLiftedPieceTweenOwner = null;
+                }
+            });
+        _currentLiftedPieceTweenOwner = pieceView;
+    }
+
+    private void KillPieceLiftTween(PieceView pieceView)
+    {
+        if (pieceView == null || _currentLiftedPieceTween == null || _currentLiftedPieceTweenOwner != pieceView)
+            return;
+
+        _currentLiftedPieceTween.Kill(false);
+        _currentLiftedPieceTween = null;
+        _currentLiftedPieceTweenOwner = null;
     }
 
     private void HandleMouseInput()
@@ -474,7 +642,13 @@ public class GameController : MonoBehaviour
                     }
                     else
                     {
+                        bool shouldPlayInvalidFeedback = ShouldPlayInvalidClickFeedback(logicCell);
                         DeselectPiece();
+
+                        if (shouldPlayInvalidFeedback)
+                        {
+                            PlayInvalidClickFeedback(pos);
+                        }
                     }
                 }
                 else
@@ -491,6 +665,8 @@ public class GameController : MonoBehaviour
 
     private void SelectPiece(Vector2Int piecePos)
     {
+        ClearHover();
+
         if (_selectedPiece != null && _selectedPiece.LogicPosition == piecePos)
         {
             DeselectPiece();
@@ -501,8 +677,9 @@ public class GameController : MonoBehaviour
 
         _selectedPiece = _pieceViews[piecePos];
         _currentValidMoves = _engine.GetValidMoves(piecePos);
+        KillPieceLiftTween(_selectedPiece);
 
-        float targetY = _cellViews[piecePos].transform.position.y + 0.1f + _pieceHoverHeight;
+        float targetY = _cellViews[piecePos].BaseWorldPosition.y + 0.1f + _pieceHoverHeight;
         _selectedPiece.transform.DOMoveY(targetY, _animationDuration).SetEase(Ease.OutQuad);
 
         foreach (Vector2Int movePos in _currentValidMoves)
@@ -518,11 +695,14 @@ public class GameController : MonoBehaviour
 
     private void DeselectPiece()
     {
+        ClearHover();
+
         if (_selectedPiece == null) return;
 
         if (_selectedPiece.gameObject != null)
         {
-            float baseY = _cellViews[_selectedPiece.LogicPosition].transform.position.y + 0.1f;
+            KillPieceLiftTween(_selectedPiece);
+            float baseY = _cellViews[_selectedPiece.LogicPosition].BaseWorldPosition.y + 0.1f;
             _selectedPiece.transform.DOMoveY(baseY, _animationDuration).SetEase(Ease.InQuad);
         }
 
@@ -538,6 +718,7 @@ public class GameController : MonoBehaviour
 
     private void ExecuteMove(Vector2Int fromPos, Vector2Int toPos)
     {
+        ClearHover();
         DeselectPiece();
         _isAnimating = true;
 
@@ -566,7 +747,7 @@ public class GameController : MonoBehaviour
                     UpdateInventoryUI();
                 }
 
-                Destroy(enemyPiece.gameObject);
+                PlayCaptureFeedback(enemyPiece, toPos);
                 _pieceViews.Remove(toPos);
             }
         }
@@ -582,7 +763,7 @@ public class GameController : MonoBehaviour
 
         UpdateCameraFocus(toPos);
 
-        Vector3 targetWorldPos = _cellViews[toPos].transform.position;
+        Vector3 targetWorldPos = _cellViews[toPos].BaseWorldPosition;
         targetWorldPos.y += 0.1f;
 
         movingPiece.MoveToWorldPosition(targetWorldPos, () =>
@@ -619,11 +800,78 @@ public class GameController : MonoBehaviour
         });
     }
 
+    private void PlayCaptureFeedback(PieceView enemyPiece, Vector2Int capturePos)
+    {
+        if (enemyPiece == null)
+            return;
+
+        Vector3 feedbackPos = enemyPiece.transform.position;
+        if (_cellViews.TryGetValue(capturePos, out CellView cellView))
+        {
+            feedbackPos = cellView.BaseWorldPosition;
+            feedbackPos.y += 0.1f;
+        }
+
+        if (_enableCaptureFeedback)
+        {
+            CaptureFeedbackVfx feedbackVfx;
+            if (_captureFeedbackPrefab != null)
+            {
+                feedbackVfx = Instantiate(_captureFeedbackPrefab, feedbackPos, Quaternion.identity);
+            }
+            else
+            {
+                GameObject feedbackObject = new GameObject("Capture Feedback VFX");
+                feedbackObject.transform.position = feedbackPos;
+                feedbackVfx = feedbackObject.AddComponent<CaptureFeedbackVfx>();
+            }
+
+            feedbackVfx.Play(_captureFeedbackIntensity);
+        }
+
+        if (_cameraController != null)
+        {
+            _cameraController.AddImpulse(feedbackPos, _captureCameraImpulse);
+        }
+
+        AnimateCapturedEnemy(enemyPiece);
+    }
+
+    private void AnimateCapturedEnemy(PieceView enemyPiece)
+    {
+        if (enemyPiece == null)
+            return;
+
+        foreach (Collider enemyCollider in enemyPiece.GetComponentsInChildren<Collider>())
+        {
+            enemyCollider.enabled = false;
+        }
+
+        Transform pieceTransform = enemyPiece.transform;
+        pieceTransform.DOKill(false);
+
+        Vector3 originalScale = pieceTransform.localScale;
+        float shrinkDuration = Mathf.Max(0.01f, _captureEnemyShrinkDuration);
+
+        Sequence captureSequence = DOTween.Sequence();
+        captureSequence
+            .SetLink(enemyPiece.gameObject)
+            .Append(pieceTransform.DOScale(originalScale * _captureEnemyPopScale, 0.05f).SetEase(Ease.OutQuad))
+            .Append(pieceTransform.DOScale(Vector3.zero, shrinkDuration).SetEase(Ease.InBack))
+            .OnComplete(() =>
+            {
+                if (enemyPiece != null)
+                {
+                    Destroy(enemyPiece.gameObject);
+                }
+            });
+    }
+
     private void ExecuteEnemyRetaliation(Vector2Int enemyPos, Vector2Int playerPos, PieceView playerPiece)
     {
         Debug.Log("Враг наносит ответный удар!");
 
-        Vector3 attackPos = _cellViews[playerPos].transform.position;
+        Vector3 attackPos = _cellViews[playerPos].BaseWorldPosition;
         attackPos.y += 0.1f;
         AudioManager.PlayEnemyAttackSound(attackPos);
 
@@ -637,12 +885,12 @@ public class GameController : MonoBehaviour
         _pieceViews[playerPos] = retaliatingEnemy;
         retaliatingEnemy.LogicPosition = playerPos;
 
-        Vector3 targetWorldPos = _cellViews[playerPos].transform.position;
+        Vector3 targetWorldPos = _cellViews[playerPos].BaseWorldPosition;
         targetWorldPos.y += 0.1f;
 
         retaliatingEnemy.MoveToWorldPosition(targetWorldPos, () =>
         {
-            Vector3 deathPos = _cellViews[playerPos].transform.position;
+            Vector3 deathPos = _cellViews[playerPos].BaseWorldPosition;
             deathPos.y += 0.1f;
 
             AudioManager.PlayKingLaughSound();
@@ -688,6 +936,8 @@ public class GameController : MonoBehaviour
 
     private void SwapPlayerPiece(PieceType newType)
     {
+        ClearHover();
+
         Vector2Int playerPos = Vector2Int.zero;
         bool foundPlayer = false;
 
@@ -712,7 +962,7 @@ public class GameController : MonoBehaviour
 
         _engine.GetCell(playerPos).CurrentPiece = newType;
 
-        Vector3 worldPos = _cellViews[playerPos].transform.position;
+        Vector3 worldPos = _cellViews[playerPos].BaseWorldPosition;
         worldPos.y += 0.1f;
 
         if (_morphParticlePrefab != null)
@@ -731,7 +981,7 @@ public class GameController : MonoBehaviour
             }
         }
 
-        Vector3 transformPos = _cellViews[playerPos].transform.position;
+        Vector3 transformPos = _cellViews[playerPos].BaseWorldPosition;
         transformPos.y += 0.1f;
         AudioManager.PlayChangeSound(transformPos);
 
@@ -778,6 +1028,8 @@ public class GameController : MonoBehaviour
 
     private void ClearBoard()
     {
+        ClearHover();
+
         foreach (var cell in _cellViews.Values) Destroy(cell.gameObject);
         foreach (var piece in _pieceViews.Values) Destroy(piece.gameObject);
 
@@ -865,7 +1117,7 @@ public class GameController : MonoBehaviour
     {
         if (_cameraController != null && _cellViews.ContainsKey(playerLogicPos))
         {
-            Vector3 worldPos = _cellViews[playerLogicPos].transform.position;
+            Vector3 worldPos = _cellViews[playerLogicPos].BaseWorldPosition;
             _cameraController.TargetFocusPosition = worldPos;
         }
     }
@@ -873,6 +1125,8 @@ public class GameController : MonoBehaviour
     public void ToggleHints()
     {
         if (IsEditMode) return;
+
+        ClearHover();
 
         _isHintActive = !_isHintActive;
 

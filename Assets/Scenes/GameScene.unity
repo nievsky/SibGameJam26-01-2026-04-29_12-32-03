@@ -2122,6 +2122,9 @@ MonoBehaviour:
   _tiltSensitivity: 2
   _maxTiltAngle: 15
   _autoResetSpeed: 3
+  _impulseDamping: 12
+  _impulseReturnSpeed: 18
+  _maxImpulseOffset: 0.35
 --- !u!1 &345796381
 GameObject:
   m_ObjectHideFlags: 0
@@ -3266,6 +3269,12 @@ MonoBehaviour:
   - {fileID: 410726992}
   - {fileID: 1685330305}
   _morphParticlePrefab: {fileID: 2712165627269231844, guid: 43b115eb107d49a49bad96671ddb4e5b, type: 3}
+  _enableCaptureFeedback: 1
+  _captureFeedbackPrefab: {fileID: 1475763726355487646, guid: eb9b4650e31264e40b8b170f0206a11b, type: 3}
+  _captureFeedbackIntensity: 1
+  _captureEnemyShrinkDuration: 0.14
+  _captureEnemyPopScale: 1.08
+  _captureCameraImpulse: 0.16
   _victoryPanel: {fileID: 990374160}
   _levelProgressText: {fileID: 120668978}
   _victoryStarObjects:
@@ -3278,6 +3287,8 @@ MonoBehaviour:
   _mainMenuButton: {fileID: 786474868}
   _pieceHoverHeight: 0.2
   _animationDuration: 0.2
+  _cellHoverLiftHeight: 0.12
+  _cellHoverLiftDuration: 0.12
   _lightCellTex: {fileID: 2800000, guid: 3444df2b9b451c94591fd1d59a0ffb71, type: 3}
   _darkCellTex: {fileID: 2800000, guid: 3444df2b9b451c94591fd1d59a0ffb71, type: 3}
 --- !u!4 &595047572

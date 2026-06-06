@@ -64,6 +64,7 @@ GameScene
   ChessEngine calculates legal moves and enemy threat maps
   Player selects/moves/morphs pieces through mouse and inventory UI
   Morphing plays PieceTransformationVfx and swaps the PieceView with DOTween scale animation
+  Capture feedback plays CaptureFeedbackVfx, camera impulse, and enemy pop/shrink animation
   Capturing enemy pieces increases score and can unlock morph types
   Capturing the enemy king opens localized victory UI and saves stars
   Last level can transition to the next build scene through SceneTransitionManager
@@ -206,13 +207,15 @@ Piece morphing:
 Move resolution:
 
 1. Deselect the current piece and lock animation.
-2. If the destination has an enemy, destroy the enemy view, add score, unlock the captured piece type, and update UI.
-3. Move the piece in `ChessEngine`.
-4. Recompute enemy threats.
-5. Move the `PieceView` with DOTween.
-6. If the captured piece was the enemy king, play victory sounds and show victory UI.
-7. If the moved player piece ends on a threatened cell, the first listed attacker retaliates.
-8. Retaliation moves the enemy into the player cell, destroys the player view, and restarts the level.
+2. If the destination has an enemy, remove its view from the runtime lookup, add score, unlock the captured piece type, and update UI.
+3. Play capture feedback immediately: editable `CaptureFeedbackVfx` prefab when assigned, runtime fallback otherwise, captured-enemy pop/shrink, and camera impulse.
+4. Move the piece in `ChessEngine`.
+5. Recompute enemy threats.
+6. Move the `PieceView` with DOTween.
+7. Play the capture or place sound once the moving piece lands.
+8. If the captured piece was the enemy king, play victory sounds and show victory UI.
+9. If the moved player piece ends on a threatened cell, the first listed attacker retaliates.
+10. Retaliation moves the enemy into the player cell, destroys the player view, and restarts the level.
 
 Victory and progress:
 
@@ -241,9 +244,12 @@ Edit mode:
 Responsibilities:
 
 - Store logical position.
+- Store a base world position used by movement and camera logic even while hover lift is active.
 - Apply textures through `MaterialPropertyBlock`.
 - Track active/inactive visual state.
 - Apply move, attack, hover, and threat textures.
+- Animate valid destination hover and invalid-click feedback.
+- Lift the hovered cell upward and return it to its base position when hover leaves.
 
 The object stays active even when the logical cell is inactive. Inactive cells are shown by texture, not by disabling the GameObject.
 
@@ -254,9 +260,38 @@ The object stays active even when the logical cell is inactive. Inactive cells a
 Responsibilities:
 
 - Store `PieceType`, `Alignment`, and logical position.
+- Apply selectable-hover scale/tint feedback through DOTween and `MaterialPropertyBlock`.
 - Animate world movement with DOTween `DOJump`.
 
 It does not decide legal moves or game outcomes.
+
+### `CaptureFeedbackVfx.cs`
+
+`CaptureFeedbackVfx` is the capture effect component used by the prefab assigned to `GameController._captureFeedbackPrefab`.
+
+The current editable prefab is `Assets/Prefabs/VFX/CaptureFeedbackVfx.prefab`. It is assigned in `GameScene` and contains child particle systems that can be tuned directly in the Unity editor:
+
+- `Impact Flash`
+- `Impact Ring`
+- `Burst Shards`
+- `Ring Shards`
+- `Heavy Dust Shards`
+- `Lingering Glints`
+
+Supporting generated assets live in `Assets/Prefabs/VFX`:
+
+- `CaptureFeedback_MeshParticle.mat`
+- `CaptureFeedback_SparkMesh.asset`
+- `CaptureFeedback_RingMesh.asset`
+
+Responsibilities:
+
+- Cache and play editable child `ParticleSystem` objects.
+- Optionally build a runtime fallback effect if no child particle systems exist.
+- Apply `_heightOffset` and optional intensity-based scale.
+- Self-destroy after `_destroyAfter`.
+
+The component intentionally lives in its own script file so Unity prefab script references remain stable after domain reloads and Play Mode edits.
 
 ### `PieceTransformationVfx.cs`
 
@@ -306,7 +341,7 @@ Bloom affects all bright HDR content in the scene. If future materials use emiss
 
 ### `CameraController.cs`
 
-`CameraController` follows the current player focus point.
+`CameraController` follows the current player focus point and supports short gameplay impulses.
 
 Responsibilities:
 
@@ -316,6 +351,7 @@ Responsibilities:
 - Blend player focus toward board center.
 - Support edge peeking based on mouse position.
 - Support right-mouse camera tilt with automatic reset.
+- Apply a damped impulse offset through `AddImpulse(Vector3 worldPosition, float strength)`, currently used by capture feedback.
 - Snap camera instantly after level load or restart.
 
 ## Menu and Scene Flow
@@ -626,6 +662,7 @@ The split is pragmatic rather than strict. `GameController` currently handles ma
 - `GameController` depends on:
   - `ChessEngine`, `BoardCell`, `LevelData`
   - `CellView`, `PieceView`
+  - `CaptureFeedbackVfx`
   - `PieceTransformationVfx`
   - `InventorySlotUI`
   - `CameraController`
@@ -707,6 +744,14 @@ Changing the transformation VFX:
 5. Keep `_showVisibilityFlash` off for normal gameplay; enable it only when debugging visibility.
 6. Tune Bloom in `Assets/Settings/SampleSceneProfile.asset` if glow strength should change globally.
 
+Changing the capture VFX:
+
+1. Edit `Assets/Prefabs/VFX/CaptureFeedbackVfx.prefab`.
+2. Tune the child particle systems directly in the prefab for shape, counts, colors, materials, and lifetimes.
+3. Use the `CaptureFeedbackVfx` component fields for `_destroyAfter`, `_heightOffset`, `_radius`, fallback behavior, and intensity scaling.
+4. Adjust `GameController` capture feedback fields for global intensity, enemy pop/shrink timing, and camera impulse.
+5. Keep the `CaptureFeedbackVfx` script reference intact on the prefab; missing script references will still allow fallback code in some cases but should be treated as prefab corruption.
+
 Changing custom cursor behavior:
 
 1. Edit the `CustomCursorManager` scene object or prefab instance.
@@ -747,6 +792,8 @@ Adding a language:
 - Several scripts use direct string FMOD event paths and scene names/indexes. These are convenient but can break silently when banks or build settings change.
 - Bloom is now active in the gameplay volume profile. This improves HDR VFX, but any future HDR/emissive materials may also bloom.
 - WebGL performance should be checked after Bloom/VFX changes. The current Bloom setup disables high-quality filtering to keep the pass cheaper.
+- `CaptureFeedbackVfx` must stay as a standalone script asset while the prefab references it. Moving the class back into another file can break the serialized `m_Script` reference and cause Unity missing-script console errors.
+- Capture feedback currently instantiates and destroys one prefab per capture. That is fine for current gameplay frequency, but pooling should be considered if capture density increases.
 - `CustomCursorManager` forces the software cursor visible/unlocked in `LateUpdate`; this can conflict with future gameplay modes that need a locked hardware cursor.
 - Script-driven localization should avoid synchronous lookups in WebGL-facing UI. Use `GameLocalization.GetStringAsync` and guard against stale callbacks when locale changes can happen while a lookup is in flight.
 - Some localized dynamic text is currently assembled from multiple keys, such as `state.level` + number + `state.from` + count. This works for English/Russian now, but a single smart/formatted string key would scale better for languages with different word order.
@@ -762,6 +809,8 @@ High-value automated tests would target:
 - `GameController` progression save/load semantics around `PlayerPrefs` keys.
 - Victory star calculation, especially the current extra victory star.
 - `GameController.SwapPlayerPiece` spawning and playing `PieceTransformationVfx`.
+- Capture feedback prefab assignment and script-reference stability after Play Mode reloads or prefab edits.
+- `GameController` capture flow: score/unlock update, VFX spawn, enemy pop/shrink destroy, capture sound after landing, and camera impulse.
 - Scene transition phase ordering, input blocking, async load activation, and duplicate manager behavior.
 - Custom cursor UI/world hover detection across scene changes and pause/settings flows.
 - Locale switching in StartGame, GameScene victory UI, and WebGL builds.

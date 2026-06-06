@@ -19,6 +19,11 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float _maxTiltAngle = 15f; 
     [SerializeField] private float _autoResetSpeed = 3f; 
 
+    [Header("Camera Impulse")]
+    [SerializeField] private float _impulseDamping = 12f;
+    [SerializeField] private float _impulseReturnSpeed = 18f;
+    [SerializeField] private float _maxImpulseOffset = 0.35f;
+
     // Внутренние переменные для расчетов доски
     private Vector3 _boardCenter;
     private Vector2 _boardLimits;
@@ -26,6 +31,8 @@ public class CameraController : MonoBehaviour
 
     private Vector3 _currentPeekOffset = Vector3.zero;
     private Vector2 _currentTilt = Vector2.zero; 
+    private Vector3 _impulseOffset = Vector3.zero;
+    private Vector3 _impulseVelocity = Vector3.zero;
 
     private void Start()
     {
@@ -57,6 +64,7 @@ public class CameraController : MonoBehaviour
     {
         Vector3 targetPeekOffset = CalculateMousePeek();
         _currentPeekOffset = Vector3.Lerp(_currentPeekOffset, targetPeekOffset, Time.deltaTime * _peekSpeed);
+        UpdateImpulseOffset();
 
         if (EnableTilt)
         {
@@ -92,13 +100,43 @@ public class CameraController : MonoBehaviour
         Vector3 rotatedOffset = tiltRotation * _cameraOffset;
 
         // Едем к вычисленной цели
-        Vector3 desiredCameraPosition = finalTarget + rotatedOffset + _currentPeekOffset;
+        Vector3 desiredCameraPosition = finalTarget + rotatedOffset + _currentPeekOffset + _impulseOffset;
         transform.position = Vector3.Lerp(transform.position, desiredCameraPosition, Time.deltaTime * _followSpeed);
 
         // Смотрим строго на вычисленную цель
-        Vector3 lookTarget = finalTarget + _currentPeekOffset;
+        Vector3 lookTarget = finalTarget + _currentPeekOffset + _impulseOffset * 0.25f;
         Quaternion targetRotation = Quaternion.LookRotation(lookTarget - transform.position);
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * _followSpeed * 1.5f);
+    }
+
+    public void AddImpulse(Vector3 worldPosition, float strength)
+    {
+        if (strength <= 0f)
+            return;
+
+        Vector3 direction = transform.position - worldPosition;
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude < 0.001f)
+        {
+            direction = transform.right;
+        }
+
+        Vector3 impulse = direction.normalized * strength;
+        impulse += Vector3.up * (strength * 0.25f);
+        _impulseVelocity += impulse;
+        _impulseVelocity = Vector3.ClampMagnitude(_impulseVelocity, _maxImpulseOffset * _impulseDamping);
+    }
+
+    private void UpdateImpulseOffset()
+    {
+        if (_impulseOffset.sqrMagnitude < 0.000001f && _impulseVelocity.sqrMagnitude < 0.000001f)
+            return;
+
+        _impulseOffset += _impulseVelocity * Time.deltaTime;
+        _impulseOffset = Vector3.ClampMagnitude(_impulseOffset, _maxImpulseOffset);
+        _impulseVelocity = Vector3.Lerp(_impulseVelocity, Vector3.zero, Time.deltaTime * _impulseDamping);
+        _impulseOffset = Vector3.Lerp(_impulseOffset, Vector3.zero, Time.deltaTime * _impulseReturnSpeed);
     }
 
     private Vector3 CalculateMousePeek()
@@ -140,6 +178,8 @@ public class CameraController : MonoBehaviour
     {
         _currentPeekOffset = Vector3.zero;
         _currentTilt = Vector2.zero;
+        _impulseOffset = Vector3.zero;
+        _impulseVelocity = Vector3.zero;
         
         // Для резкого прыжка тоже применяем ограничения
         Vector3 finalTarget = TargetFocusPosition;

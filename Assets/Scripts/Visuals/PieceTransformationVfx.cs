@@ -1192,3 +1192,742 @@ public class PieceTransformationVfx : MonoBehaviour
         }
     }
 }
+
+[DisallowMultipleComponent]
+internal sealed class RuntimeCaptureFeedbackVfxFallback : MonoBehaviour
+{
+    [SerializeField] private Color _sparkColor = new Color(1f, 0.72f, 0.24f, 1f);
+    [SerializeField] private Color _flashColor = new Color(1f, 0.93f, 0.48f, 0.92f);
+    [SerializeField] private Color _dustColor = new Color(0.5f, 0.25f, 0.12f, 0.6f);
+    [SerializeField] private float _destroyAfter = 1.25f;
+    [SerializeField] private float _heightOffset = 0.22f;
+    [SerializeField] private float _radius = 0.48f;
+    [SerializeField] private bool _useEditableChildSystems = true;
+    [SerializeField] private bool _buildFallbackIfNoChildSystems = true;
+    [SerializeField] private bool _scaleEditablePrefabWithIntensity = true;
+
+    private const float ImpactFlashDuration = 0.38f;
+
+    private ParticleSystem _sparkBurst;
+    private ParticleSystem _sparkRing;
+    private ParticleSystem _dustBurst;
+    private MeshRenderer _flashRenderer;
+    private MeshRenderer _ringRenderer;
+    private Transform _flashTransform;
+    private Transform _ringTransform;
+    private MaterialPropertyBlock _propertyBlock;
+    private ParticleSystem[] _editableSystems;
+    private float _impactFlashStartedAt;
+    private bool _impactFlashActive;
+    private bool _usingEditableSystems;
+
+    private static Material _sparkMaterial;
+    private static Material _dustMaterial;
+    private static Mesh _sparkMesh;
+    private static Mesh _flashMesh;
+    private static Mesh _ringMesh;
+    private static Texture2D _sparkTexture;
+    private static Texture2D _dustTexture;
+
+    private void Awake()
+    {
+        EnsureSystems();
+    }
+
+    private void LateUpdate()
+    {
+        UpdateImpactFlash();
+    }
+
+    public void Play(float intensity = 1f)
+    {
+        EnsureSystems();
+
+        intensity = Mathf.Max(0.2f, intensity);
+        transform.position += Vector3.up * _heightOffset;
+
+        if (_usingEditableSystems)
+        {
+            PlayEditableSystems(intensity);
+            Destroy(gameObject, _destroyAfter);
+            return;
+        }
+
+        if (_sparkBurst == null)
+        {
+            Destroy(gameObject, _destroyAfter);
+            return;
+        }
+
+        PlayImpactFlash();
+        PlaySystem(_sparkBurst, Mathf.RoundToInt(42 * intensity));
+        PlaySystem(_sparkRing, Mathf.RoundToInt(28 * intensity));
+        PlaySystem(_dustBurst, Mathf.RoundToInt(16 * intensity));
+
+        Destroy(gameObject, _destroyAfter);
+    }
+
+    private void EnsureSystems()
+    {
+        if (_sparkBurst != null || _usingEditableSystems)
+            return;
+
+        if (TryUseEditableChildSystems())
+            return;
+
+        if (!_buildFallbackIfNoChildSystems)
+            return;
+
+        CreateImpactFlash();
+        _sparkBurst = CreateSparkBurst();
+        _sparkRing = CreateSparkRing();
+        _dustBurst = CreateDustBurst();
+    }
+
+    private bool TryUseEditableChildSystems()
+    {
+        if (!_useEditableChildSystems)
+            return false;
+
+        _editableSystems = GetComponentsInChildren<ParticleSystem>(true);
+        if (_editableSystems == null || _editableSystems.Length == 0)
+            return false;
+
+        _usingEditableSystems = true;
+        return true;
+    }
+
+    private void PlayEditableSystems(float intensity)
+    {
+        if (_scaleEditablePrefabWithIntensity)
+        {
+            transform.localScale *= Mathf.Sqrt(intensity);
+        }
+
+        for (int i = 0; i < _editableSystems.Length; i++)
+        {
+            ParticleSystem system = _editableSystems[i];
+            if (system == null)
+                continue;
+
+            system.gameObject.SetActive(true);
+            system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            system.Clear(true);
+            system.Play(true);
+        }
+    }
+
+    private ParticleSystem CreateSparkBurst()
+    {
+        ParticleSystem system = CreateChildSystem("Capture Shards", _sparkColor, true);
+
+        ParticleSystem.MainModule main = system.main;
+        main.duration = 0.58f;
+        main.maxParticles = 110;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.2f, 0.46f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(3.6f, 6.2f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.045f, 0.11f);
+        main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+        main.gravityModifier = 0.18f;
+
+        ParticleSystem.ShapeModule shape = system.shape;
+        shape.shapeType = ParticleSystemShapeType.Sphere;
+        shape.radius = _radius * 0.14f;
+
+        ParticleSystem.ForceOverLifetimeModule force = system.forceOverLifetime;
+        force.enabled = true;
+        force.y = new ParticleSystem.MinMaxCurve(0.12f, 0.55f);
+
+        ParticleSystem.NoiseModule noise = system.noise;
+        noise.enabled = true;
+        noise.strength = 0.28f;
+        noise.frequency = 3.5f;
+
+        ParticleSystem.SizeOverLifetimeModule size = system.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+            new Keyframe(0f, 0.22f),
+            new Keyframe(0.12f, 1.2f),
+            new Keyframe(0.55f, 0.5f),
+            new Keyframe(1f, 0f)));
+
+        ParticleSystem.ColorOverLifetimeModule color = system.colorOverLifetime;
+        color.enabled = true;
+        color.color = new ParticleSystem.MinMaxGradient(CreateFadeGradient(Color.Lerp(_sparkColor, Color.white, 0.18f), WithAlpha(_sparkColor, 0f)));
+
+        ParticleSystem.TrailModule trails = system.trails;
+        trails.enabled = true;
+        trails.ratio = 0.82f;
+        trails.lifetime = 0.11f;
+        trails.widthOverTrail = new ParticleSystem.MinMaxCurve(0.018f);
+
+        return system;
+    }
+
+    private ParticleSystem CreateSparkRing()
+    {
+        ParticleSystem system = CreateChildSystem("Capture Ring Shards", _flashColor, true);
+
+        ParticleSystem.MainModule main = system.main;
+        main.duration = 0.5f;
+        main.maxParticles = 80;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.24f, 0.52f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(1.9f, 3.2f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.035f, 0.085f);
+        main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+        main.gravityModifier = 0f;
+
+        ParticleSystem.ShapeModule shape = system.shape;
+        shape.shapeType = ParticleSystemShapeType.Circle;
+        shape.radius = _radius * 0.58f;
+        shape.radiusThickness = 0.08f;
+        shape.rotation = new Vector3(90f, 0f, 0f);
+
+        ParticleSystem.VelocityOverLifetimeModule velocity = system.velocityOverLifetime;
+        velocity.enabled = true;
+        velocity.space = ParticleSystemSimulationSpace.Local;
+        velocity.x = new ParticleSystem.MinMaxCurve(0f);
+        velocity.y = new ParticleSystem.MinMaxCurve(0.45f);
+        velocity.z = new ParticleSystem.MinMaxCurve(0f);
+
+        ParticleSystem.NoiseModule noise = system.noise;
+        noise.enabled = true;
+        noise.strength = 0.18f;
+        noise.frequency = 2.2f;
+
+        ParticleSystem.SizeOverLifetimeModule size = system.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+            new Keyframe(0f, 0.1f),
+            new Keyframe(0.18f, 1f),
+            new Keyframe(0.72f, 0.48f),
+            new Keyframe(1f, 0f)));
+
+        ParticleSystem.ColorOverLifetimeModule color = system.colorOverLifetime;
+        color.enabled = true;
+        color.color = new ParticleSystem.MinMaxGradient(CreateFadeGradient(_flashColor, WithAlpha(_sparkColor, 0f)));
+
+        ParticleSystem.TrailModule trails = system.trails;
+        trails.enabled = true;
+        trails.ratio = 0.9f;
+        trails.lifetime = 0.1f;
+        trails.widthOverTrail = new ParticleSystem.MinMaxCurve(0.014f);
+
+        return system;
+    }
+
+    private ParticleSystem CreateDustBurst()
+    {
+        ParticleSystem system = CreateChildSystem("Capture Soft Dust", _dustColor, false);
+
+        ParticleSystem.MainModule main = system.main;
+        main.duration = 0.75f;
+        main.maxParticles = 36;
+        main.startLifetime = new ParticleSystem.MinMaxCurve(0.42f, 0.78f);
+        main.startSpeed = new ParticleSystem.MinMaxCurve(0.45f, 1.2f);
+        main.startSize = new ParticleSystem.MinMaxCurve(0.15f, 0.3f);
+        main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
+        main.gravityModifier = -0.04f;
+
+        ParticleSystem.ShapeModule shape = system.shape;
+        shape.shapeType = ParticleSystemShapeType.Hemisphere;
+        shape.radius = _radius * 0.42f;
+
+        ParticleSystem.ForceOverLifetimeModule force = system.forceOverLifetime;
+        force.enabled = true;
+        force.y = new ParticleSystem.MinMaxCurve(0.08f, 0.32f);
+
+        ParticleSystem.SizeOverLifetimeModule size = system.sizeOverLifetime;
+        size.enabled = true;
+        size.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
+            new Keyframe(0f, 0.45f),
+            new Keyframe(0.32f, 1f),
+            new Keyframe(1f, 1.25f)));
+
+        ParticleSystem.ColorOverLifetimeModule color = system.colorOverLifetime;
+        color.enabled = true;
+        color.color = new ParticleSystem.MinMaxGradient(CreateFadeGradient(_dustColor, WithAlpha(_dustColor, 0f)));
+
+        return system;
+    }
+
+    private ParticleSystem CreateChildSystem(string systemName, Color startColor, bool useSparkMesh)
+    {
+        GameObject child = new GameObject(systemName);
+        child.transform.SetParent(transform, false);
+
+        ParticleSystem system = child.AddComponent<ParticleSystem>();
+        system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        system.Clear(true);
+
+        ParticleSystem.MainModule main = system.main;
+        main.loop = false;
+        main.duration = 0.65f;
+        main.playOnAwake = false;
+        main.simulationSpace = ParticleSystemSimulationSpace.World;
+        main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+        main.startColor = startColor;
+
+        ParticleSystem.EmissionModule emission = system.emission;
+        emission.enabled = false;
+        emission.rateOverTime = 0f;
+
+        ParticleSystemRenderer renderer = system.GetComponent<ParticleSystemRenderer>();
+        Material material = useSparkMesh ? GetSparkMaterial() : GetDustMaterial();
+        if (material != null)
+        {
+            renderer.sharedMaterial = material;
+            renderer.trailMaterial = material;
+        }
+
+        if (useSparkMesh)
+        {
+            renderer.renderMode = ParticleSystemRenderMode.Mesh;
+            renderer.mesh = GetSparkMesh();
+            renderer.sortingOrder = 16;
+        }
+        else
+        {
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sortingOrder = 8;
+        }
+
+        renderer.shadowCastingMode = ShadowCastingMode.Off;
+        renderer.receiveShadows = false;
+
+        return system;
+    }
+
+    private void CreateImpactFlash()
+    {
+        Material material = GetSparkMaterial();
+        if (material == null)
+            return;
+
+        GameObject flashObject = new GameObject("Capture Impact Flash");
+        flashObject.transform.SetParent(transform, false);
+        flashObject.transform.localPosition = Vector3.zero;
+        flashObject.transform.localScale = Vector3.zero;
+
+        MeshFilter flashFilter = flashObject.AddComponent<MeshFilter>();
+        flashFilter.sharedMesh = GetFlashMesh();
+
+        _flashRenderer = flashObject.AddComponent<MeshRenderer>();
+        _flashRenderer.sharedMaterial = material;
+        _flashRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        _flashRenderer.receiveShadows = false;
+        _flashRenderer.sortingOrder = 20;
+        _flashTransform = flashObject.transform;
+        flashObject.SetActive(false);
+
+        GameObject ringObject = new GameObject("Capture Impact Ring");
+        ringObject.transform.SetParent(transform, false);
+        ringObject.transform.localPosition = Vector3.up * 0.04f;
+        ringObject.transform.localScale = Vector3.zero;
+
+        MeshFilter ringFilter = ringObject.AddComponent<MeshFilter>();
+        ringFilter.sharedMesh = GetRingMesh();
+
+        _ringRenderer = ringObject.AddComponent<MeshRenderer>();
+        _ringRenderer.sharedMaterial = material;
+        _ringRenderer.shadowCastingMode = ShadowCastingMode.Off;
+        _ringRenderer.receiveShadows = false;
+        _ringRenderer.sortingOrder = 19;
+        _ringTransform = ringObject.transform;
+        ringObject.SetActive(false);
+
+        _propertyBlock = new MaterialPropertyBlock();
+    }
+
+    private void PlayImpactFlash()
+    {
+        if (_flashRenderer == null)
+            return;
+
+        _impactFlashStartedAt = Time.time;
+        _impactFlashActive = true;
+        _flashRenderer.gameObject.SetActive(true);
+
+        if (_ringRenderer != null)
+        {
+            _ringRenderer.gameObject.SetActive(true);
+        }
+
+        UpdateImpactFlash();
+    }
+
+    private void UpdateImpactFlash()
+    {
+        if (!_impactFlashActive || _flashRenderer == null)
+            return;
+
+        float elapsed = Mathf.Max(0f, Time.time - _impactFlashStartedAt);
+        float t = Mathf.Clamp01(elapsed / ImpactFlashDuration);
+        float easeOut = 1f - Mathf.Pow(1f - t, 3f);
+        float alpha = Mathf.Clamp01(Mathf.Sin(t * Mathf.PI) * 1.15f);
+
+        float flashScale = Mathf.Lerp(_radius * 0.12f, _radius * 0.95f, easeOut);
+        _flashTransform.localScale = new Vector3(flashScale, flashScale * 1.15f, flashScale);
+        _flashTransform.localRotation = Quaternion.Euler(elapsed * 420f, elapsed * 280f, elapsed * 360f);
+
+        Color flashColor = Color.Lerp(_flashColor, Color.white, 0.2f);
+        flashColor.a *= alpha;
+        ApplyRendererColor(_flashRenderer, flashColor);
+
+        if (_ringRenderer != null)
+        {
+            float ringScale = Mathf.Lerp(_radius * 0.22f, _radius * 1.75f, easeOut);
+            _ringTransform.localScale = new Vector3(ringScale, 1f, ringScale);
+            _ringTransform.localRotation = Quaternion.Euler(0f, elapsed * 210f, 0f);
+
+            Color ringColor = Color.Lerp(_sparkColor, _flashColor, Mathf.SmoothStep(0f, 1f, t));
+            ringColor.a *= alpha * (1f - t);
+            ApplyRendererColor(_ringRenderer, ringColor);
+        }
+
+        if (t >= 1f)
+        {
+            _impactFlashActive = false;
+            _flashRenderer.gameObject.SetActive(false);
+
+            if (_ringRenderer != null)
+            {
+                _ringRenderer.gameObject.SetActive(false);
+            }
+        }
+    }
+
+    private void ApplyRendererColor(Renderer renderer, Color color)
+    {
+        if (_propertyBlock == null)
+        {
+            _propertyBlock = new MaterialPropertyBlock();
+        }
+
+        renderer.GetPropertyBlock(_propertyBlock);
+        _propertyBlock.SetColor("_BaseColor", color);
+        _propertyBlock.SetColor("_Color", color);
+        _propertyBlock.SetColor("_EmissionColor", color);
+        renderer.SetPropertyBlock(_propertyBlock);
+    }
+
+    private static void PlaySystem(ParticleSystem system, int count)
+    {
+        system.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        system.Play(true);
+        system.Emit(count);
+    }
+
+    private static Material GetSparkMaterial()
+    {
+        if (_sparkMaterial != null)
+            return _sparkMaterial;
+
+        _sparkMaterial = CreateParticleMaterial("Runtime Capture Spark Material", GetSparkTexture());
+        return _sparkMaterial;
+    }
+
+    private static Material GetDustMaterial()
+    {
+        if (_dustMaterial != null)
+            return _dustMaterial;
+
+        _dustMaterial = CreateParticleMaterial("Runtime Capture Dust Material", GetDustTexture());
+        return _dustMaterial;
+    }
+
+    private static Material CreateParticleMaterial(string materialName, Texture2D texture)
+    {
+        Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+        if (shader == null)
+            shader = Shader.Find("Particles/Standard Unlit");
+        if (shader == null)
+            shader = Shader.Find("Sprites/Default");
+        if (shader == null)
+            shader = Shader.Find("Unlit/Transparent");
+        if (shader == null)
+            return null;
+
+        Material material = new Material(shader)
+        {
+            name = materialName,
+            hideFlags = HideFlags.HideAndDontSave,
+            renderQueue = (int)RenderQueue.Transparent
+        };
+
+        if (texture != null)
+        {
+            if (material.HasProperty("_BaseMap"))
+                material.SetTexture("_BaseMap", texture);
+            if (material.HasProperty("_MainTex"))
+                material.SetTexture("_MainTex", texture);
+        }
+
+        Color color = Color.white;
+        if (material.HasProperty("_BaseColor"))
+            material.SetColor("_BaseColor", color);
+        if (material.HasProperty("_Color"))
+            material.SetColor("_Color", color);
+        if (material.HasProperty("_EmissionColor"))
+        {
+            material.SetColor("_EmissionColor", color);
+            material.EnableKeyword("_EMISSION");
+        }
+
+        if (material.HasProperty("_Surface"))
+            material.SetFloat("_Surface", 1f);
+        if (material.HasProperty("_Blend"))
+            material.SetFloat("_Blend", 0f);
+        if (material.HasProperty("_SrcBlend"))
+            material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+        if (material.HasProperty("_DstBlend"))
+            material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+        if (material.HasProperty("_ZWrite"))
+            material.SetFloat("_ZWrite", 0f);
+        if (material.HasProperty("_Cull"))
+            material.SetFloat("_Cull", 0f);
+
+        material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+        return material;
+    }
+
+    private static Mesh GetSparkMesh()
+    {
+        if (_sparkMesh != null)
+            return _sparkMesh;
+
+        _sparkMesh = new Mesh
+        {
+            name = "Runtime Capture Spark Mesh",
+            hideFlags = HideFlags.HideAndDontSave
+        };
+
+        _sparkMesh.SetVertices(new[]
+        {
+            new Vector3(0f, 0.62f, 0f),
+            new Vector3(0f, -0.62f, 0f),
+            new Vector3(-0.18f, 0f, 0f),
+            new Vector3(0.18f, 0f, 0f),
+            new Vector3(0f, 0f, 0.18f),
+            new Vector3(0f, 0f, -0.18f)
+        });
+
+        _sparkMesh.SetUVs(0, new[]
+        {
+            new Vector2(0.5f, 1f),
+            new Vector2(0.5f, 0f),
+            new Vector2(0f, 0.5f),
+            new Vector2(1f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f)
+        });
+
+        _sparkMesh.SetTriangles(new[]
+        {
+            0, 4, 3,
+            0, 3, 5,
+            0, 5, 2,
+            0, 2, 4,
+            1, 3, 4,
+            1, 5, 3,
+            1, 2, 5,
+            1, 4, 2
+        }, 0);
+        _sparkMesh.RecalculateNormals();
+        _sparkMesh.RecalculateBounds();
+
+        return _sparkMesh;
+    }
+
+    private static Mesh GetFlashMesh()
+    {
+        if (_flashMesh != null)
+            return _flashMesh;
+
+        _flashMesh = new Mesh
+        {
+            name = "Runtime Capture Flash Mesh",
+            hideFlags = HideFlags.HideAndDontSave
+        };
+
+        _flashMesh.SetVertices(new[]
+        {
+            new Vector3(0f, 0.66f, 0f),
+            new Vector3(0f, -0.66f, 0f),
+            new Vector3(-0.5f, 0f, 0f),
+            new Vector3(0.5f, 0f, 0f),
+            new Vector3(0f, 0f, 0.5f),
+            new Vector3(0f, 0f, -0.5f)
+        });
+
+        _flashMesh.SetTriangles(new[]
+        {
+            0, 4, 3,
+            0, 3, 5,
+            0, 5, 2,
+            0, 2, 4,
+            1, 3, 4,
+            1, 5, 3,
+            1, 2, 5,
+            1, 4, 2
+        }, 0);
+        _flashMesh.RecalculateNormals();
+        _flashMesh.RecalculateBounds();
+
+        return _flashMesh;
+    }
+
+    private static Mesh GetRingMesh()
+    {
+        if (_ringMesh != null)
+            return _ringMesh;
+
+        const int segments = 56;
+        const float innerRadius = 0.78f;
+        const float outerRadius = 1f;
+
+        Vector3[] vertices = new Vector3[segments * 2];
+        Vector2[] uvs = new Vector2[vertices.Length];
+        int[] triangles = new int[segments * 6];
+
+        for (int i = 0; i < segments; i++)
+        {
+            float angle = (i / (float)segments) * Mathf.PI * 2f;
+            float sin = Mathf.Sin(angle);
+            float cos = Mathf.Cos(angle);
+            int outer = i * 2;
+            int inner = outer + 1;
+
+            vertices[outer] = new Vector3(cos * outerRadius, 0f, sin * outerRadius);
+            vertices[inner] = new Vector3(cos * innerRadius, 0f, sin * innerRadius);
+            uvs[outer] = new Vector2(1f, i / (float)segments);
+            uvs[inner] = new Vector2(0f, i / (float)segments);
+        }
+
+        for (int i = 0; i < segments; i++)
+        {
+            int next = (i + 1) % segments;
+            int outer = i * 2;
+            int inner = outer + 1;
+            int nextOuter = next * 2;
+            int nextInner = nextOuter + 1;
+            int triangleIndex = i * 6;
+
+            triangles[triangleIndex] = outer;
+            triangles[triangleIndex + 1] = inner;
+            triangles[triangleIndex + 2] = nextOuter;
+            triangles[triangleIndex + 3] = nextOuter;
+            triangles[triangleIndex + 4] = inner;
+            triangles[triangleIndex + 5] = nextInner;
+        }
+
+        _ringMesh = new Mesh
+        {
+            name = "Runtime Capture Ring Mesh",
+            hideFlags = HideFlags.HideAndDontSave
+        };
+        _ringMesh.vertices = vertices;
+        _ringMesh.uv = uvs;
+        _ringMesh.triangles = triangles;
+        _ringMesh.RecalculateNormals();
+        _ringMesh.RecalculateBounds();
+
+        return _ringMesh;
+    }
+
+    private static Texture2D GetSparkTexture()
+    {
+        if (_sparkTexture != null)
+            return _sparkTexture;
+
+        const int size = 32;
+        _sparkTexture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            name = "Runtime Capture Spark Texture",
+            hideFlags = HideFlags.HideAndDontSave,
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float px = ((x + 0.5f) / size) * 2f - 1f;
+                float py = ((y + 0.5f) / size) * 2f - 1f;
+                float absX = Mathf.Abs(px);
+                float absY = Mathf.Abs(py);
+                float distance = Mathf.Sqrt(px * px + py * py);
+                float core = 1f - Mathf.SmoothStep(0f, 0.22f, distance);
+                float horizontal = (1f - Mathf.SmoothStep(0f, 0.055f, absY)) * (1f - Mathf.SmoothStep(0.1f, 1f, absX));
+                float vertical = (1f - Mathf.SmoothStep(0f, 0.055f, absX)) * (1f - Mathf.SmoothStep(0.1f, 1f, absY));
+                float alpha = Mathf.Max(core, Mathf.Max(horizontal, vertical));
+                alpha *= 1f - Mathf.SmoothStep(0.84f, 1f, distance);
+                alpha = Mathf.Clamp01(alpha);
+
+                _sparkTexture.SetPixel(x, y, new Color(1f, 1f, 1f, alpha * alpha));
+            }
+        }
+
+        _sparkTexture.Apply(false, true);
+        return _sparkTexture;
+    }
+
+    private static Texture2D GetDustTexture()
+    {
+        if (_dustTexture != null)
+            return _dustTexture;
+
+        const int size = 32;
+        _dustTexture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            name = "Runtime Capture Dust Texture",
+            hideFlags = HideFlags.HideAndDontSave,
+            wrapMode = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear
+        };
+
+        for (int y = 0; y < size; y++)
+        {
+            for (int x = 0; x < size; x++)
+            {
+                float px = ((x + 0.5f) / size) * 2f - 1f;
+                float py = ((y + 0.5f) / size) * 2f - 1f;
+                float distance = Mathf.Sqrt(px * px + py * py);
+                float alpha = 1f - Mathf.SmoothStep(0.1f, 1f, distance);
+                alpha *= alpha;
+
+                _dustTexture.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(alpha)));
+            }
+        }
+
+        _dustTexture.Apply(false, true);
+        return _dustTexture;
+    }
+
+    private static Gradient CreateFadeGradient(Color start, Color end)
+    {
+        Gradient gradient = new Gradient();
+        gradient.SetKeys(
+            new[]
+            {
+                new GradientColorKey(start, 0f),
+                new GradientColorKey(Color.Lerp(start, Color.white, 0.22f), 0.22f),
+                new GradientColorKey(end, 1f)
+            },
+            new[]
+            {
+                new GradientAlphaKey(start.a, 0f),
+                new GradientAlphaKey(start.a * 0.95f, 0.35f),
+                new GradientAlphaKey(end.a, 1f)
+            });
+
+        return gradient;
+    }
+
+    private static Color WithAlpha(Color color, float alpha)
+    {
+        color.a = alpha;
+        return color;
+    }
+}
