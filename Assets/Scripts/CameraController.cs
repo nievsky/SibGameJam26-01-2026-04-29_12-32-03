@@ -24,6 +24,9 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float _impulseReturnSpeed = 18f;
     [SerializeField] private float _maxImpulseOffset = 0.35f;
 
+    [Header("Camera Shake")]
+    [SerializeField] private float _maxShakeOffset = 0.45f;
+
     // Внутренние переменные для расчетов доски
     private Vector3 _boardCenter;
     private Vector2 _boardLimits;
@@ -33,6 +36,14 @@ public class CameraController : MonoBehaviour
     private Vector2 _currentTilt = Vector2.zero; 
     private Vector3 _impulseOffset = Vector3.zero;
     private Vector3 _impulseVelocity = Vector3.zero;
+    private Vector3 _smoothedCameraPosition = Vector3.zero;
+    private bool _hasSmoothedCameraPosition = false;
+    private Vector3 _shakeOffset = Vector3.zero;
+    private Vector2 _shakeSeed = Vector2.zero;
+    private float _shakeTimer = 0f;
+    private float _shakeDuration = 0f;
+    private float _shakeStrength = 0f;
+    private float _shakeFrequency = 30f;
 
     private void Start()
     {
@@ -65,6 +76,7 @@ public class CameraController : MonoBehaviour
         Vector3 targetPeekOffset = CalculateMousePeek();
         _currentPeekOffset = Vector3.Lerp(_currentPeekOffset, targetPeekOffset, Time.deltaTime * _peekSpeed);
         UpdateImpulseOffset();
+        UpdateShakeOffset();
 
         if (EnableTilt)
         {
@@ -99,12 +111,18 @@ public class CameraController : MonoBehaviour
         Quaternion tiltRotation = Quaternion.Euler(_currentTilt.x, _currentTilt.y, 0f);
         Vector3 rotatedOffset = tiltRotation * _cameraOffset;
 
-        // Едем к вычисленной цели
-        Vector3 desiredCameraPosition = finalTarget + rotatedOffset + _currentPeekOffset + _impulseOffset;
-        transform.position = Vector3.Lerp(transform.position, desiredCameraPosition, Time.deltaTime * _followSpeed);
+        Vector3 desiredCameraPosition = finalTarget + rotatedOffset + _currentPeekOffset;
+        if (!_hasSmoothedCameraPosition)
+        {
+            _smoothedCameraPosition = transform.position - _impulseOffset - _shakeOffset;
+            _hasSmoothedCameraPosition = true;
+        }
+
+        _smoothedCameraPosition = Vector3.Lerp(_smoothedCameraPosition, desiredCameraPosition, Time.deltaTime * _followSpeed);
+        transform.position = _smoothedCameraPosition + _impulseOffset + _shakeOffset;
 
         // Смотрим строго на вычисленную цель
-        Vector3 lookTarget = finalTarget + _currentPeekOffset + _impulseOffset * 0.25f;
+        Vector3 lookTarget = finalTarget + _currentPeekOffset + _impulseOffset * 0.35f + _shakeOffset * 0.65f;
         Quaternion targetRotation = Quaternion.LookRotation(lookTarget - transform.position);
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * _followSpeed * 1.5f);
     }
@@ -128,6 +146,18 @@ public class CameraController : MonoBehaviour
         _impulseVelocity = Vector3.ClampMagnitude(_impulseVelocity, _maxImpulseOffset * _impulseDamping);
     }
 
+    public void AddShake(float strength, float duration, float frequency)
+    {
+        if (strength <= 0f || duration <= 0f)
+            return;
+
+        _shakeStrength = Mathf.Max(_shakeStrength, strength);
+        _shakeDuration = Mathf.Max(_shakeDuration, duration);
+        _shakeTimer = Mathf.Max(_shakeTimer, duration);
+        _shakeFrequency = Mathf.Max(0.1f, frequency);
+        _shakeSeed = Random.insideUnitCircle * 100f;
+    }
+
     private void UpdateImpulseOffset()
     {
         if (_impulseOffset.sqrMagnitude < 0.000001f && _impulseVelocity.sqrMagnitude < 0.000001f)
@@ -137,6 +167,30 @@ public class CameraController : MonoBehaviour
         _impulseOffset = Vector3.ClampMagnitude(_impulseOffset, _maxImpulseOffset);
         _impulseVelocity = Vector3.Lerp(_impulseVelocity, Vector3.zero, Time.deltaTime * _impulseDamping);
         _impulseOffset = Vector3.Lerp(_impulseOffset, Vector3.zero, Time.deltaTime * _impulseReturnSpeed);
+    }
+
+    private void UpdateShakeOffset()
+    {
+        if (_shakeTimer <= 0f)
+        {
+            _shakeOffset = Vector3.zero;
+            _shakeDuration = 0f;
+            _shakeStrength = 0f;
+            return;
+        }
+
+        _shakeTimer = Mathf.Max(0f, _shakeTimer - Time.deltaTime);
+
+        float normalizedTime = _shakeDuration > 0f ? _shakeTimer / _shakeDuration : 0f;
+        float envelope = normalizedTime * normalizedTime;
+        float time = Time.time * _shakeFrequency;
+
+        float x = (Mathf.PerlinNoise(_shakeSeed.x, time) - 0.5f) * 2f;
+        float y = (Mathf.PerlinNoise(_shakeSeed.y, time + 19.31f) - 0.5f) * 2f;
+        float z = (Mathf.PerlinNoise(_shakeSeed.x + 41.17f, _shakeSeed.y + time) - 0.5f) * 2f;
+
+        Vector3 rawShake = transform.right * x + transform.up * (y * 0.45f) + transform.forward * (z * 0.25f);
+        _shakeOffset = Vector3.ClampMagnitude(rawShake, 1f) * Mathf.Min(_shakeStrength, _maxShakeOffset) * envelope;
     }
 
     private Vector3 CalculateMousePeek()
@@ -180,6 +234,11 @@ public class CameraController : MonoBehaviour
         _currentTilt = Vector2.zero;
         _impulseOffset = Vector3.zero;
         _impulseVelocity = Vector3.zero;
+        _shakeOffset = Vector3.zero;
+        _shakeTimer = 0f;
+        _shakeDuration = 0f;
+        _shakeStrength = 0f;
+        _hasSmoothedCameraPosition = true;
         
         // Для резкого прыжка тоже применяем ограничения
         Vector3 finalTarget = TargetFocusPosition;
@@ -190,7 +249,8 @@ public class CameraController : MonoBehaviour
             finalTarget = Vector3.Lerp(finalTarget, _boardCenter, 0.2f);
         }
 
-        transform.position = finalTarget + _cameraOffset;
+        _smoothedCameraPosition = finalTarget + _cameraOffset;
+        transform.position = _smoothedCameraPosition;
         transform.rotation = Quaternion.LookRotation(finalTarget - transform.position);
     }
 }

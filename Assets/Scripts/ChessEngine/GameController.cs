@@ -74,6 +74,17 @@ public class GameController : MonoBehaviour
     [SerializeField] private float _captureEnemyPopScale = 1.08f;
     [SerializeField] private float _captureCameraImpulse = 0.16f;
 
+    [Header("Capture Camera Impact")]
+    [SerializeField, Min(0f)] private float _captureCameraShakeStrength = 0.14f;
+    [SerializeField, Min(0f)] private float _captureCameraShakeDuration = 0.18f;
+    [SerializeField, Min(0f)] private float _enemyCaptureCameraImpulse = 0.22f;
+    [SerializeField, Min(0f)] private float _enemyCaptureCameraShakeStrength = 0.24f;
+    [SerializeField, Min(0f)] private float _enemyCaptureCameraShakeDuration = 0.28f;
+    [SerializeField, Min(0.1f)] private float _captureCameraShakeFrequency = 46f;
+
+    [Header("Enemy Capture Restart")]
+    [SerializeField, Min(0f)] private float _enemyCaptureRestartDelay = 1.2f;
+
     [Header("UI Экран Победы")]
     [SerializeField] private GameObject _victoryPanel;
     [SerializeField] private TextMeshProUGUI _levelProgressText;
@@ -121,6 +132,7 @@ public class GameController : MonoBehaviour
     private Vector2Int? _currentLiftedCell = null;
     private Tween _currentLiftedPieceTween = null;
     private PieceView _currentLiftedPieceTweenOwner = null;
+    private Coroutine _enemyCaptureRestartRoutine = null;
     private int _victoryTextLocalizationVersion;
 
     private void OnEnable()
@@ -165,6 +177,7 @@ public class GameController : MonoBehaviour
 
     private void OnDestroy()
     {
+        CancelEnemyCaptureRestartDelay();
         StopCoroutine("StartAudioWithDelay");
         AudioManager.StopAllPersistentAudio();
         PauseAudioManager.StopSnapshot();
@@ -770,6 +783,7 @@ public class GameController : MonoBehaviour
         {
             if (isKingCaptured)
             {
+                PlayCaptureCameraImpact(targetWorldPos, _captureCameraShakeStrength, _captureCameraShakeDuration, _captureCameraImpulse);
                 AudioManager.PlayKingAngrySound();
                 AudioManager.PlayWinSound();
                 Debug.Log("КОРОЛЬ ПОВЕРЖЕН!");
@@ -780,6 +794,7 @@ public class GameController : MonoBehaviour
             if (isCapture)
             {
                 AudioManager.PlayCaptureSound(targetWorldPos);
+                PlayCaptureCameraImpact(targetWorldPos, _captureCameraShakeStrength, _captureCameraShakeDuration, _captureCameraImpulse);
             }
             else
             {
@@ -829,12 +844,16 @@ public class GameController : MonoBehaviour
             feedbackVfx.Play(_captureFeedbackIntensity);
         }
 
-        if (_cameraController != null)
-        {
-            _cameraController.AddImpulse(feedbackPos, _captureCameraImpulse);
-        }
-
         AnimateCapturedEnemy(enemyPiece);
+    }
+
+    private void PlayCaptureCameraImpact(Vector3 worldPosition, float shakeStrength, float shakeDuration, float impulseStrength)
+    {
+        if (_cameraController == null)
+            return;
+
+        _cameraController.AddImpulse(worldPosition, impulseStrength);
+        _cameraController.AddShake(shakeStrength, shakeDuration, _captureCameraShakeFrequency);
     }
 
     private void AnimateCapturedEnemy(PieceView enemyPiece)
@@ -897,9 +916,37 @@ public class GameController : MonoBehaviour
             AudioManager.PlayKillSound(deathPos);
             AudioManager.PlayPlaceSound(targetWorldPos);
 
+            PlayCaptureCameraImpact(deathPos, _enemyCaptureCameraShakeStrength, _enemyCaptureCameraShakeDuration, _enemyCaptureCameraImpulse);
             Destroy(playerPiece.gameObject);
-            RestartLevel();
+            ScheduleEnemyCaptureRestart();
         });
+    }
+
+    private void ScheduleEnemyCaptureRestart()
+    {
+        CancelEnemyCaptureRestartDelay();
+        _enemyCaptureRestartRoutine = StartCoroutine(RestartAfterEnemyCaptureDelay());
+    }
+
+    private IEnumerator RestartAfterEnemyCaptureDelay()
+    {
+        float delay = Mathf.Max(0f, _enemyCaptureRestartDelay);
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+
+        _enemyCaptureRestartRoutine = null;
+        RestartLevel();
+    }
+
+    private void CancelEnemyCaptureRestartDelay()
+    {
+        if (_enemyCaptureRestartRoutine == null)
+            return;
+
+        StopCoroutine(_enemyCaptureRestartRoutine);
+        _enemyCaptureRestartRoutine = null;
     }
 
     private void RefreshBoardThreats()
@@ -1042,6 +1089,7 @@ public class GameController : MonoBehaviour
 
     private void RestartLevel()
     {
+        CancelEnemyCaptureRestartDelay();
         Debug.Log("--- РЕСТАРТ УРОВНЯ ---");
 
         if (Camera.main != null)

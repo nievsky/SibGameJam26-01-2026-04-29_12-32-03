@@ -2125,6 +2125,7 @@ MonoBehaviour:
   _impulseDamping: 12
   _impulseReturnSpeed: 18
   _maxImpulseOffset: 0.35
+  _maxShakeOffset: 0.25
 --- !u!1 &345796381
 GameObject:
   m_ObjectHideFlags: 0
@@ -3271,10 +3272,17 @@ MonoBehaviour:
   _morphParticlePrefab: {fileID: 2712165627269231844, guid: 43b115eb107d49a49bad96671ddb4e5b, type: 3}
   _enableCaptureFeedback: 1
   _captureFeedbackPrefab: {fileID: 1475763726355487646, guid: eb9b4650e31264e40b8b170f0206a11b, type: 3}
-  _captureFeedbackIntensity: 1
+  _captureFeedbackIntensity: 5
   _captureEnemyShrinkDuration: 0.14
   _captureEnemyPopScale: 1.08
-  _captureCameraImpulse: 0.16
+  _captureCameraImpulse: 10
+  _captureCameraShakeStrength: 2
+  _captureCameraShakeDuration: 0.8
+  _enemyCaptureCameraImpulse: 1
+  _enemyCaptureCameraShakeStrength: 1
+  _enemyCaptureCameraShakeDuration: 0.3
+  _captureCameraShakeFrequency: 20
+  _enemyCaptureRestartDelay: 1.2
   _victoryPanel: {fileID: 990374160}
   _levelProgressText: {fileID: 120668978}
   _victoryStarObjects:
